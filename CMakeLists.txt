@@ -536,6 +536,15 @@ if(BUILD_TESTS)
     target_link_libraries(TestProfile PRIVATE Qt::Core Qt::Test)
     add_test(NAME ProfileTests COMMAND TestProfile)
 
+    if(WIN32)
+        qt_add_executable(TestWindowsTokenStore tests/tst_WindowsTokenStore.cpp
+            src/Core/TokenStore.cpp src/Core/Snowflake.cpp src/Core/Logging.cpp)
+        target_include_directories(TestWindowsTokenStore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+        target_link_libraries(TestWindowsTokenStore PRIVATE Qt::Core Qt::Test qt${QT_VERSION_MAJOR}keychain)
+        add_test(NAME WindowsTokenStoreTests COMMAND TestWindowsTokenStore)
+        set_tests_properties(WindowsTokenStoreTests PROPERTIES TIMEOUT 30)
+    endif()
+
     qt_add_executable(TestMarkdown tests/tst_Markdown.cpp src/Core/Markdown/Parser.cpp
         src/Core/EmojiSegmenter.cpp src/Core/Snowflake.cpp)
     target_link_libraries(TestMarkdown PRIVATE Qt::Core Qt::Test)
