@@ -1,5 +1,6 @@
 #include "HubWindow.hpp"
 #include "AccountCard.hpp"
+#include "DesktopShortcut.hpp"
 #include "Core/Profile.hpp"
 #include "LocalControl.hpp"
 #include "CardMetadata.hpp"
@@ -478,6 +479,13 @@ void HubWindow::menu(const QString &id, QWidget *anchor)
     include->setChecked(!registry.option("exclude/" + id).toBool());
     connect(include, &QAction::triggered, this, [this,id](bool checked) { save("exclude/" + id, !checked); });
     actions.addAction(tr("Set as default"), this, [this,id] { save("default", id); });
+#ifdef Q_OS_WIN
+    actions.addAction(tr("Create desktop shortcut"), this, [this,id] {
+        const auto error = createDesktopShortcut(id);
+        if (!error.isEmpty())
+            QMessageBox::warning(this, windowTitle(), error);
+    });
+#endif
     auto *archive = actions.addAction(tr("Archive profile"), this, [this,id] {
         if (save("archived/" + id, true))
             render();

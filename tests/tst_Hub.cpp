@@ -1,4 +1,5 @@
 #include "Hub/Registry.hpp"
+#include "Hub/DesktopShortcut.hpp"
 #include "Hub/CardMetadata.hpp"
 #include <QProcess>
 #include <QSaveFile>
@@ -79,6 +80,13 @@ private slots:
         file.write(QByteArray(32769, 'x'));
         file.close();
         QVERIFY(!CardMetadata::read(temp.path()));
+    }
+
+    void shortcuts()
+    {
+        QCOMPARE(shortcutArguments("studio-2"), QString("--profile studio-2"));
+        for (auto id : {"", "a b", "../a", "a&b", "a\"b", "A"})
+            QVERIFY(shortcutArguments(id).isEmpty());
     }
 
     void arrangement()
