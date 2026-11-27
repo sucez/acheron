@@ -10,6 +10,12 @@
 #include <QtGlobal>
 #include <QFontDatabase>
 #include <QSettings>
+#include <QDir>
+#include <QLockFile>
+#include <QMessageBox>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QStringList>
 
 #ifndef ACHERON_NO_VOICE
 #include <dave/dave.h>
@@ -64,19 +70,65 @@ int main(int argc, char *argv[])
 {
     using namespace Acheron;
 
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
 
-    QApplication::setOrganizationName("ouwou");
-    QApplication::setApplicationName("Acheron");
-    applyFontEngineSetting();
+    // Choose the profile before QSettings or QStandardPaths are used.
+    QString profile = QStringLiteral("principal");
+    bool profileSeen = false;
+    bool invalidProfile = false;
+    for (int i = 1; i < argc; ++i) {
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg == QStringLiteral("--profile")) {
+            if (profileSeen || i + 1 >= argc) {
+                invalidProfile = true;
+                break;
+            }
+            profileSeen = true;
+            profile = QString::fromLocal8Bit(argv[++i]).toLower();
+        }
+    }
+    const QRegularExpression profilePattern(QStringLiteral("^[a-z0-9][a-z0-9_-]{0,31}$"));
+    invalidProfile = invalidProfile || !profilePattern.match(profile).hasMatch();
+
+    // A separate namespace keeps the original installation untouched.
+    const QString appName = QStringLiteral("Acheron-Custom-") + (invalidProfile ? QStringLiteral("principal") : profile);
+    QApplication::setOrganizationName("sucez");
+    QApplication::setApplicationName(appName);
+    if (!invalidProfile)
+        applyFontEngineSetting();
 
     App app(argc, argv);
-    app.setDesktopFileName("io.github.ouwou.acheron");
+    app.setOrganizationName("sucez");
+    app.setApplicationName(appName);
+    app.setApplicationDisplayName(QStringLiteral("Acheron Custom - ") + profile);
+    app.setDesktopFileName("io.github.sucez.acheron");
+
+    if (invalidProfile) {
+        QMessageBox::warning(nullptr, QObject::tr("Invalid profile"),
+                             QObject::tr("Use --profile NAME (1-32 letters, digits, hyphens or underscores; start with a letter or digit)."));
+        return 1;
+    }
+
+    // Acquire the lock before opening databases, caches or log files.
+    const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dataPath.isEmpty() || !QDir().mkpath(dataPath)) {
+        QMessageBox::critical(nullptr, QObject::tr("Profile error"),
+                              QObject::tr("Cannot create the profile data directory."));
+        return 1;
+    }
+
+    QLockFile profileLock(QDir(dataPath).filePath(QStringLiteral("profile.lock")));
+    profileLock.setStaleLockTime(0);
+    if (!profileLock.tryLock(0)) {
+        QMessageBox::warning(nullptr, QObject::tr("Profile unavailable"),
+                             QObject::tr("This profile is already open or its lock could not be acquired. Choose another profile."));
+        return 1;
+    }
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
     if (!Core::Theme::Manager::startsWithSystemStyle())
         app.setStyle("Fusion");
 
@@ -112,6 +164,8 @@ int main(int argc, char *argv[])
     if (!Storage::DatabaseManager::instance().init()) {
         QMessageBox::critical(nullptr, "Fatal error",
                               "Could not initialize the database. Acheron will now close.");
+        Core::Logger::cleanup();
+        curl_global_cleanup();
         return -1;
     }
 
