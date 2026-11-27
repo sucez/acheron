@@ -14,3 +14,5 @@ Each named profile uses a distinct application settings/data namespace and keych
 6. Remove an account in a test profile and verify the other profile and original installation are unaffected.
 
 This is an experimental change. Compilation alone does not validate session isolation or voice/notification behavior.
+
+CI branch: Windows validation build of the experimental profile implementation.
