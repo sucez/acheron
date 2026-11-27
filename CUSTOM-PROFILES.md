@@ -1,24 +1,15 @@
-# Acheron Custom — profiles (experimental)
+# Utiliser plusieurs comptes avec Acheron Hub
 
-Launch `acheron.exe` for the default `principal` profile, or `acheron.exe --profile secondary` for a separate profile. In View, select Open another profile and enter a name. Names are case-insensitive, 1–32 ASCII letters/digits/hyphens/underscores, starting with a letter or digit.
+Lancer `acheron.exe` sous Windows ou `acheron` sous Linux ouvre le Hub. Au premier lancement, **Add an account** propose un identifiant de profil libre, puis ouvre **Manage Accounts** dans la nouvelle fenêtre. Terminer l’ajout avec le parcours de connexion habituel. Annuler avant de valider le nom laisse la liste intacte. Annuler ensuite conserve un profil vide que **Login** permet de compléter.
 
-Each named profile uses a distinct application settings/data namespace and keychain service. The original Acheron account database is not migrated. Sign in separately and enable Connect on startup if desired. Use different Discord accounts in different profiles. Never commit local data or credentials.
+Les profils Acheron Custom déjà utilisés apparaissent automatiquement, y compris `principal`. **Login** ouvre la messagerie et tente de reconnecter le compte enregistré. **Switch to window** rappelle une fenêtre déjà ouverte. **View → Open Acheron Hub** permet de revenir au lanceur depuis la messagerie. Par défaut, fermer le Hub laisse les fenêtres ouvertes.
 
-## Manual Windows smoke test
+Un ancien profil qui contient plusieurs comptes garde une seule carte **Multiple accounts**. Son ouverture conserve les réglages de connexion automatique de chaque compte et donne accès au gestionnaire natif. Le menu de la carte permet de personnaliser son nom et sa couleur. **Archive profile** masque un profil fermé. **Settings → Unarchive** le rend de nouveau visible.
 
-1. Start the custom executable alongside the original installation; confirm the custom profile initially has no accounts.
-2. Open `secondary` from the View menu. Confirm a separate window and profile title.
-3. Sign in with distinct accounts, enable Connect on startup, and confirm each window shows its own messages and account list.
-4. Change a theme setting in one profile; confirm the other does not change. Close both and reopen; confirm settings and sessions persist.
-5. Try opening `secondary` a second time (also `SECONDARY`); confirm a warning and no second window for that profile.
-6. Remove an account in a test profile and verify the other profile and original installation are unaffected.
+## Raccourcis directs et compatibilité
 
-This is an experimental change. Compilation alone does not validate session isolation or voice/notification behavior.
+`acheron.exe --profile principal` et `acheron --profile=travail` ouvrent directement la messagerie du profil choisi. Le nom technique accepte 1 à 32 lettres ASCII, chiffres, tirets ou traits de soulignement, avec une lettre ou un chiffre en première position. Les majuscules sont ramenées en minuscules. La géométrie, les comptes, les préférences et les clés de trousseau gardent leurs emplacements. Le verrou reste actif tant que la session tourne, y compris dans la zone de notification.
 
-## Compatibilité après l’audit #001
+**Mise à niveau Windows depuis le prototype antérieur à #001.** L’ancienne entrée du trousseau pouvait appartenir à plusieurs profils. La correction #001 impose une nouvelle saisie dans ce cas et conserve l’ancienne entrée en place. Le passage des versions #001/#001-B au Hub conserve les clés corrigées. Les données d’Acheron officiel restent dans leur espace d’origine.
 
-Les mêmes options s’appliquent à `acheron` sous Linux. Le menu et les formes `--profile NOM` et `--profile=NOM` acceptent de 1 à 32 caractères ASCII. Les majuscules sont ramenées en minuscules après validation.
-
-**Mise à niveau Windows depuis le prototype.** La nouvelle version demande de renseigner à nouveau le jeton des comptes déjà configurés. L’ancienne clé pouvait appartenir à plusieurs profils ou à l’installation officielle. La nouvelle version laisse cette clé en place. Les fiches SQLite et les réglages existants sont conservés.
-
-Le verrou reste actif quand le processus est réduit dans la zone de notification. Pour libérer le profil, quitter le processus depuis son menu. Les profils d’un même utilisateur partagent les permissions du système. Voir [l’inventaire du stockage](docs/ARCHITECTURE.md) et [les tests automatisés hors connexion](docs/TESTING.md).
+Les quatre modes de démarrage, la restauration, les erreurs et les essais Windows sont décrits dans [le guide du Hub](docs/HUB.md) et [les procédures de validation](docs/TESTING.md).

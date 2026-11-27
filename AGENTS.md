@@ -6,3 +6,5 @@ Le client dérive d’ouwou/acheron. Conserver la licence GPL, les crédits et l
 - Compiler selon [BUILD](docs/BUILD.md) et vérifier selon [TESTING](docs/TESTING.md). Les options du cloud sont locales. Les valeurs par défaut et les variantes du workflow Windows font partie des configurations prises en charge.
 - Utiliser des profils jetables, des lignes de comptes synthétiques et une reconnexion désactivée pour les tests automatisés. Garder les bases, journaux, trousseaux et jetons hors de Git.
 - Consigner les changements visibles dans [CHANGELOG](CHANGELOG.md), les choix de compatibilité dans [DECISIONS](docs/DECISIONS.md) et les évolutions envisagées dans [ROADMAP](ROADMAP.md).
+
+Le démarrage sans profil doit pouvoir afficher le Hub sans initialiser les services de messagerie. Conserver le parcours autonome `--profile`. Réserver le trousseau à la session concernée et documenter toute évolution du protocole local. Exercer les deux scénarios X11 après un changement du lancement ou des verrous. [Fonctionnement du Hub](docs/HUB.md)
