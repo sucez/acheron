@@ -73,7 +73,7 @@ int runSessionWindow(Core::Session &session, UI::MainWindow &window, const QStri
                      [&](Core::Snowflake id, Core::ConnectionState state) {
         if (gatewayError == id && (state == Core::ConnectionState::Connecting || state == Core::ConnectionState::Connected))
             gatewayError.reset();
-        if (needsAuth == id && state == Core::ConnectionState::Connected)
+        if (needsAuth == id && (state == Core::ConnectionState::Connecting || state == Core::ConnectionState::Connected))
             needsAuth.reset();
     });
     bool preserve = false;
