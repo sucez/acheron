@@ -9,14 +9,10 @@
 #endif
 
 #include "Logging.hpp"
+#include "Profile.hpp"
 
 namespace Acheron {
 namespace Core {
-
-QString TokenStore::keyForAccount(Snowflake accountId)
-{
-    return QString("account_%1_token").arg(accountId.toString());
-}
 
 QString TokenStore::describeKeychainFailure(const QString &keychainError)
 {
@@ -31,7 +27,7 @@ Result<void> TokenStore::saveToken(Snowflake accountId, const QString &token)
 {
     QKeychain::WritePasswordJob job(QCoreApplication::applicationName());
     job.setAutoDelete(false);
-    job.setKey(keyForAccount(accountId));
+    job.setKey(Profile::tokenKey(accountId.toString()));
     job.setTextData(token);
 
     QEventLoop loop;
@@ -52,7 +48,7 @@ Result<QString> TokenStore::loadToken(Snowflake accountId)
 {
     QKeychain::ReadPasswordJob job(QCoreApplication::applicationName());
     job.setAutoDelete(false);
-    job.setKey(keyForAccount(accountId));
+    job.setKey(Profile::tokenKey(accountId.toString()));
 
     QEventLoop loop;
     QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);
@@ -76,7 +72,7 @@ bool TokenStore::deleteToken(Snowflake accountId)
 {
     QKeychain::DeletePasswordJob job(QCoreApplication::applicationName());
     job.setAutoDelete(false);
-    job.setKey(keyForAccount(accountId));
+    job.setKey(Profile::tokenKey(accountId.toString()));
 
     QEventLoop loop;
     QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);

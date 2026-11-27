@@ -2,6 +2,7 @@
 #include "UI/MainWindow.hpp"
 #include "Storage/DatabaseManager.hpp"
 #include "Core/Session.hpp"
+#include "Core/Profile.hpp"
 #include "Core/Logging.hpp"
 #include "Core/Theme/Manager.hpp"
 
@@ -13,7 +14,6 @@
 #include <QDir>
 #include <QLockFile>
 #include <QMessageBox>
-#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStringList>
 
@@ -76,25 +76,12 @@ int main(int argc, char *argv[])
 #endif
 
     // Choose the profile before QSettings or QStandardPaths are used.
-    QString profile = QStringLiteral("principal");
-    bool profileSeen = false;
-    bool invalidProfile = false;
-    for (int i = 1; i < argc; ++i) {
-        const QString arg = QString::fromLocal8Bit(argv[i]);
-        if (arg == QStringLiteral("--profile")) {
-            if (profileSeen || i + 1 >= argc) {
-                invalidProfile = true;
-                break;
-            }
-            profileSeen = true;
-            profile = QString::fromLocal8Bit(argv[++i]).toLower();
-        }
-    }
-    const QRegularExpression profilePattern(QStringLiteral("^[a-z0-9][a-z0-9_-]{0,31}$"));
-    invalidProfile = invalidProfile || !profilePattern.match(profile).hasMatch();
-
-    // A separate namespace keeps the original installation untouched.
-    const QString appName = QStringLiteral("Acheron-Custom-") + (invalidProfile ? QStringLiteral("principal") : profile);
+    QStringList arguments;
+    for (int i = 1; i < argc; ++i)
+        arguments.append(QString::fromLocal8Bit(argv[i]));
+    const QString profile = Core::Profile::fromArguments(arguments);
+    const bool invalidProfile = profile.isEmpty();
+    const QString appName = QStringLiteral("Acheron-Custom-") + profile;
     QApplication::setOrganizationName("sucez");
     QApplication::setApplicationName(appName);
     if (!invalidProfile)
