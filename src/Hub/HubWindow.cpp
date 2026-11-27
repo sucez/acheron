@@ -1,5 +1,6 @@
 #include "HubWindow.hpp"
 #include "AccountCard.hpp"
+#include "ProfileColor.hpp"
 #include "DesktopShortcut.hpp"
 #include "Core/Profile.hpp"
 #include "LocalControl.hpp"
@@ -72,7 +73,7 @@ private:
     QString full;
 };
 
-const QStringList AvatarColors{"#4a416f", "#34565a", "#644351", "#435479"};
+
 
 void foreground(QWidget &window)
 {
@@ -288,7 +289,7 @@ void HubWindow::render()
         auto *row = new QHBoxLayout(card);
         row->setContentsMargins(12, padding, 10, padding);
         const int savedColor = registry.option("color/" + id, -1).toInt();
-        const auto color = AvatarColors.value(savedColor, AvatarColors.at(qHash(id, 0) % AvatarColors.size()));
+        const auto color = profileColor(id, savedColor);
         auto *avatar = label(display.left(1).toUpper());
         if (portraits.contains(id))
             avatar->setPixmap(portraits.value(id).scaled(36, 36, Qt::KeepAspectRatio, Qt::SmoothTransformation));

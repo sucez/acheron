@@ -7,7 +7,8 @@ import tempfile
 import time
 from pathlib import Path
 from Xlib import X, display
-from x11_helpers import close_window, key, window
+from Xlib.ext import xtest
+from x11_helpers import close_window, key, until, window
 
 
 def exercise(executable, output):
@@ -42,17 +43,37 @@ def exercise(executable, output):
                 capture(hub, density)
                 sizes.append(hub.get_geometry().height)
                 if density == "comfortable":
+                    def pointer(y):
+                        point = x.screen().root.translate_coords(hub, 30, y)
+                        xtest.fake_input(x, X.MotionNotify, x=point.x, y=point.y)
+                        x.sync()
+                        time.sleep(.08)
+                    pointer(323)
+                    xtest.fake_input(x, X.ButtonPress, 1)
+                    pointer(302)
+                    pointer(272)
+                    pointer(252)
+                    xtest.fake_input(x, X.ButtonRelease, 1)
+                    x.sync()
+                    until(lambda: "order=luna, voyage, atelier" in (hub_dir / "registry.ini").read_text(),
+                          "dragged voyage above atelier")
                     def second_card_pixel():
-                        return hub.get_image(30, 255, 1, 1, X.ZPixmap, 0xffffffff).data
-                    before = second_card_pixel()
+                        return hub.get_image(30, 280, 1, 1, X.ZPixmap, 0xffffffff).data
                     hub.set_input_focus(X.RevertToParent, X.CurrentTime)
                     key(x, "f", "Control_L")
+                    time.sleep(.25)  # Qt animates a button activated via its shortcut.
+                    before = second_card_pixel()
                     for letter in "moonlight":
                         key(x, letter)
                     capture(hub, "search")
                     assert second_card_pixel() != before, "second card still visible after filtering"
                 close_window(x, hub)
                 assert child.wait(timeout=5) == 0
+        with subprocess.Popen([executable, "--profile", "luna"], env=env) as child:
+            chat = window(x, "Acheron Custom - luna", child.pid)
+            capture(chat, "session-profile")
+            close_window(x, chat)
+            assert child.wait(timeout=5) == 0
         x.close()
         assert sizes[0] < sizes[1] < sizes[2], sizes
         return sizes
