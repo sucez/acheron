@@ -74,3 +74,5 @@ La vérification observe le Hub vide, un puis trois profils historiques, 19 prof
 3. Avec un profil réservé à la qualification connectée, vérifier Login avec une entrée de trousseau valide, le parcours natif en cas de nouvelle authentification et l’actualisation du pseudo et de la miniature. Les scénarios automatisés restent hors ligne.
 4. Vérifier la réduction dans la zone de notification, l’activation ou le clignotement depuis une autre application, la fermeture normale et globale, puis la restauration. Ouvrir un raccourci `--profile` avec restauration activée et vérifier que seul ce profil démarre.
 5. Examiner à 100 %, 125 %, 150 % et 200 % les boutons, le défilement, le pseudo long et les fenêtres de préférences. Vérifier aussi la voix, la vidéo et les notifications dans les configurations qui les activent.
+
+CI qualification of Hub revision 0d57f86: run the existing build matrix on this temporary branch. Results pending; no runtime Windows validation is implied.
