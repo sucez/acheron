@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QLocalSocket>
 #include <QTimer>
+#include <QStandardPaths>
 #include <memory>
 
 namespace Acheron::Hub {
@@ -11,8 +12,14 @@ namespace Acheron::Hub {
 QString endpoint(const QString &directory)
 {
     const auto identity = QDir::cleanPath(directory) + QLatin1Char('|') + QDir::homePath();
-    return QStringLiteral("acheron-v1-") + QString::fromLatin1(
+    const auto name = QStringLiteral("acheron-v1-") + QString::fromLatin1(
             QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha256).toHex().left(32));
+#ifdef Q_OS_LINUX
+    const auto runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (!runtime.isEmpty())
+        return QDir(runtime).filePath(name);
+#endif
+    return name;
 }
 
 bool listen(QLocalServer &server, const QString &directory, Handler handle)

@@ -1,5 +1,6 @@
 #include "Registry.hpp"
 #include "Core/Profile.hpp"
+#include <QFileInfo>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QUuid>

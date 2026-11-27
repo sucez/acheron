@@ -42,6 +42,7 @@ public:
     [[nodiscard]] Discord::CaptchaResolver *getCaptchaResolver() const { return captchaResolver; }
 
 signals:
+    void authenticationRequired(Core::Snowflake accountId);
     void connectionStateChanged(Snowflake accountId, Core::ConnectionState newState);
     void connectFailed(Snowflake accountId, const QString &reason);
     void accountDetailsUpdated(const Core::AccountInfo &info);

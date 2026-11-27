@@ -38,6 +38,7 @@ public:
 
     [[nodiscard]] Core::Result<void> addAccount(const Core::AccountInfo &account);
     void removeAccount(int row);
+    const Core::AccountInfo *singleAccount() const { return accounts.size() == 1 ? &accounts.first() : nullptr; }
 
     void setConnectionState(int row, Core::ConnectionState state);
     void setAutoConnect(int row, bool enabled);

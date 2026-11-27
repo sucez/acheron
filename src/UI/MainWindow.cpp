@@ -4,8 +4,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMessageBox>
-#include <QInputDialog>
-#include <QLineEdit>
+#include <QVBoxLayout>
 #include <QStringList>
 #include <QProcess>
 #include <QPointer>
@@ -28,7 +27,6 @@
 #include "Forum/NewPostDialog.hpp"
 #include "ThreadBrowser/ThreadBrowserPopup.hpp"
 #include "PinnedMessages/PinnedMessagesPopup.hpp"
-#include "Core/Profile.hpp"
 #include "Core/ForumManager.hpp"
 #include "ChannelList/ChannelTreeModel.hpp"
 #include "ChannelList/ChannelFilterProxyModel.hpp"
@@ -574,6 +572,7 @@ void MainWindow::detachInstance(Core::Snowflake accountId)
     chatView->setFavoriteGifs(nullptr);
 
     currentInstance = nullptr;
+    onTotalMentionCountChanged(mentionCount, mentionCount);
 }
 
 void MainWindow::switchActiveInstance(Core::ClientInstance *newInstance)
@@ -600,6 +599,7 @@ void MainWindow::switchActiveInstance(Core::ClientInstance *newInstance)
         expressionPicker->hide();
 
     currentInstance = newInstance;
+    onTotalMentionCountChanged(mentionCount, mentionCount);
     auto *msgs = currentInstance->messages();
 
     memberListModel->setAccount(currentInstance->accountId());
@@ -2546,7 +2546,10 @@ void MainWindow::refreshTabReadStates()
 
 void MainWindow::onTotalMentionCountChanged(int count, int previousCount)
 {
-    const QString appName = QGuiApplication::applicationDisplayName();
+    mentionCount = count;
+    QString appName = QGuiApplication::applicationDisplayName();
+    if (currentInstance && !currentInstance->accountInfo().username.isEmpty())
+        appName += QStringLiteral(" · @") + currentInstance->accountInfo().username;
     setWindowTitle(count > 0 ? QStringLiteral("(%1) %2").arg(count).arg(appName) : appName);
 
     if (previousCount == 0 && count > 0)
@@ -2894,25 +2897,9 @@ void MainWindow::setupMenu()
     connect(accountsAction, &QAction::triggered, this, &MainWindow::openAccountsWindow);
     viewMenu->addAction(accountsAction);
 
-    auto *profileAction = viewMenu->addAction(tr("Open another profile..."));
-    connect(profileAction, &QAction::triggered, this, [this] {
-        bool accepted = false;
-        const QString input = QInputDialog::getText(
-                this, tr("Open another profile"),
-                tr("Profile name (for example: secondary):"), QLineEdit::Normal,
-                QString(), &accepted);
-        if (!accepted)
-            return;
-        const QString profile = Core::Profile::canonicalName(input);
-        if (profile.isEmpty()) {
-            QMessageBox::warning(this, tr("Invalid profile"),
-                                 tr("Use 1-32 letters, digits, hyphens or underscores; start with a letter or digit."));
-            return;
-        }
-        if (!QProcess::startDetached(QCoreApplication::applicationFilePath(),
-                                     QStringList{QStringLiteral("--profile"), profile})) {
-            QMessageBox::warning(this, tr("Profile error"), tr("Could not start Acheron."));
-        }
+    viewMenu->addAction(tr("Open Acheron Hub"), this, [this] {
+        if (!QProcess::startDetached(QCoreApplication::applicationFilePath(), QStringList{}))
+            QMessageBox::warning(this, tr("Acheron Hub"), tr("Could not start the Hub."));
     });
 
     auto *settingsAction = new QAction(tr("&Settings"), this);

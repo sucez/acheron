@@ -66,6 +66,7 @@ void Session::connectAccount(Snowflake accountId)
     Result<QString> token = TokenStore::loadToken(accountId);
     if (!token.success()) {
         qCWarning(LogCore) << "No token found in keychain for account:" << accountId;
+        emit authenticationRequired(accountId);
         emit connectFailed(accountId, token.error);
         return;
     }
@@ -98,6 +99,9 @@ void Session::startInstance(const AccountInfo &acc)
                     }
                 }
             });
+
+    connect(instance, &ClientInstance::authenticationFailed, this,
+            [this, accountId] { emit authenticationRequired(accountId); });
 
     connect(instance, &ClientInstance::detailsUpdated, this, [this](const AccountInfo &info) {
         repo.saveAccount(info);

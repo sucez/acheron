@@ -196,6 +196,12 @@ endif()
 set(PROJECT_SOURCES
     resources.qrc
     src/main.cpp
+    src/Hub/HubWindow.cpp
+    src/Hub/CardMetadata.cpp
+    src/Hub/Registry.cpp
+    src/Hub/SessionManager.cpp
+    src/Hub/SessionControl.cpp
+    src/Hub/LocalControl.cpp
     src/Core/Snowflake.cpp
     src/Core/OrderedJson.cpp
     src/Core/ProxyConfig.cpp
@@ -535,6 +541,12 @@ if(BUILD_TESTS)
     target_include_directories(TestProfile PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(TestProfile PRIVATE Qt::Core Qt::Test)
     add_test(NAME ProfileTests COMMAND TestProfile)
+
+    qt_add_executable(TestHub tests/tst_Hub.cpp src/Hub/CardMetadata.cpp src/Hub/Registry.cpp src/Hub/LocalControl.cpp)
+    target_include_directories(TestHub PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(TestHub PRIVATE Qt::Core Qt::Network Qt::Sql Qt::Test)
+    add_test(NAME HubTests COMMAND TestHub)
+    set_tests_properties(HubTests PROPERTIES TIMEOUT 30)
 
     if(WIN32)
         qt_add_executable(TestWindowsTokenStore tests/tst_WindowsTokenStore.cpp

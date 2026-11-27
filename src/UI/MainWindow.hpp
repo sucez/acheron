@@ -69,6 +69,10 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(Core::Session *session, QWidget *parent = nullptr);
     ~MainWindow() override;
+    void quitFromTray();
+    void showFromTray();
+    void openAccountsWindow();
+    AccountsModel *accountModel() const { return accountsModel; }
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -159,6 +163,7 @@ private:
 private:
     void setupUi();
     void setupMenu();
+    int mentionCount = 0;
 
     [[nodiscard]] TabEntry makeTabEntry(ChannelNode *node, ChannelNode *accountNode) const;
 
@@ -279,11 +284,8 @@ private:
     QHash<QPair<Core::Snowflake, Core::Snowflake>, QPointer<GuildSettingsWindow>> guildSettingsWindows;
 
 private slots:
-    void openAccountsWindow();
     void openSettingsWindow();
     void applyCloseToTray();
-    void showFromTray();
-    void quitFromTray();
 
 private:
     Core::Session *session;

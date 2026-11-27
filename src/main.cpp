@@ -1,4 +1,6 @@
 #include "App.hpp"
+#include "Hub/HubWindow.hpp"
+#include "Hub/SessionControl.hpp"
 #include "UI/MainWindow.hpp"
 #include "Storage/DatabaseManager.hpp"
 #include "Core/Session.hpp"
@@ -6,6 +8,7 @@
 #include "Core/Logging.hpp"
 #include "Core/Theme/Manager.hpp"
 
+#include <algorithm>
 #include <curl/curl.h>
 
 #include <QtGlobal>
@@ -80,16 +83,21 @@ int main(int argc, char *argv[])
     for (int i = 1; i < argc; ++i)
         arguments.append(QString::fromLocal8Bit(argv[i]));
     const QString profile = Core::Profile::fromArguments(arguments);
+    const bool hub = std::none_of(arguments.cbegin(), arguments.cend(), [](const QString &arg) {
+        return arg == QStringLiteral("--profile") || arg.startsWith(QStringLiteral("--profile="));
+    });
     const bool invalidProfile = profile.isEmpty();
-    const QString appName = QStringLiteral("Acheron-Custom-") + profile;
+    const QString appName = hub ? QStringLiteral("Acheron-Hub") : Core::Profile::ApplicationPrefix + profile;
     QApplication::setOrganizationName("sucez");
     QApplication::setApplicationName(appName);
-    if (!invalidProfile)
+    if (!hub && !invalidProfile)
         applyFontEngineSetting();
 
     App app(argc, argv);
     app.setOrganizationName("sucez");
     app.setApplicationName(appName);
+    if (hub)
+        return Hub::runHub();
     app.setApplicationDisplayName(QStringLiteral("Acheron Custom - ") + profile);
     app.setDesktopFileName("io.github.sucez.acheron");
 
@@ -110,6 +118,10 @@ int main(int argc, char *argv[])
     QLockFile profileLock(QDir(dataPath).filePath(QStringLiteral("profile.lock")));
     profileLock.setStaleLockTime(0);
     if (!profileLock.tryLock(0)) {
+        // A concurrently opened shortcut may win the lock after the Hub checked it.
+        // The Hub observes that owner and reports an unavailable lock itself.
+        if (arguments.contains("--hub-login") || arguments.contains("--hub-add"))
+            return 1;
         QMessageBox::warning(nullptr, QObject::tr("Profile unavailable"),
                              QObject::tr("This profile is already open or its lock could not be acquired. Choose another profile."));
         return 1;
@@ -161,11 +173,7 @@ int main(int argc, char *argv[])
     {
         Core::Session session;
         UI::MainWindow window(&session);
-        window.show();
-
-        session.autoConnectAccounts();
-
-        exitCode = app.exec();
+        exitCode = Hub::runSessionWindow(session, window, dataPath, arguments);
     }
 
     Storage::DatabaseManager::instance().shutdown();
