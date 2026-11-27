@@ -9,6 +9,8 @@ class Registry
 public:
     explicit Registry(const QString &hubDir);
     QStringList profiles() const;
+    QStringList ordered() const;
+    bool moveTo(const QString &id, const QString &target);
     QString directory(const QString &id) const;
     QString suggest() const;
     bool create(const QString &id);

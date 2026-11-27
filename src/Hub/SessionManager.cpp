@@ -134,6 +134,8 @@ void SessionManager::open(const QString &id, bool add)
     if (!registry.profiles().contains(id) || deadlines.contains(id))
         return;
     if (locked(id)) {
+        registry.set("used/" + id, QDateTime::currentMSecsSinceEpoch());
+        emit changed();
         request(this, registry.directory(id), state(id) == NeedsAuth ? "login" : "activate", [this](QByteArray reply) {
             if (reply != "ok")
                 emit problem(tr("The profile is in use. Switch to its window from the taskbar."));
@@ -145,6 +147,7 @@ void SessionManager::open(const QString &id, bool add)
         setState(id, Failed);
         return;
     }
+    registry.set("used/" + id, QDateTime::currentMSecsSinceEpoch());
     deadlines[id] = QDateTime::currentMSecsSinceEpoch() + 15000;
     setState(id, Launching);
     monitor.start();

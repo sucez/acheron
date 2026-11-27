@@ -81,6 +81,21 @@ private slots:
         QVERIFY(!CardMetadata::read(temp.path()));
     }
 
+    void arrangement()
+    {
+        QTemporaryDir dir;
+        Registry r(dir.filePath("Hub"));
+        for (auto id : {"a", "b", "c"}) QVERIFY(r.create(id));
+        QVERIFY(r.moveTo("c", "a"));
+        Registry reopened(dir.filePath("Hub"));
+        QCOMPARE(reopened.ordered(), QStringList({"c", "a", "b"}));
+        QVERIFY(reopened.setOptions({{"favorite/b", true}, {"sort", "name"}}));
+        QCOMPARE(reopened.ordered(), QStringList({"b", "a", "c"}));
+        QVERIFY(reopened.setOptions({{"sort", "recent"}, {"used/c", 12}}));
+        QCOMPARE(reopened.ordered(), QStringList({"b", "c", "a"}));
+        QVERIFY(!reopened.moveTo("b", "c"));
+    }
+
     void missingSchema()
     {
         QTemporaryDir dir;
