@@ -5,10 +5,22 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from Xlib import X, display
 from Xlib.ext import xtest
 from x11_helpers import close_window, key, until, window
+
+
+@contextmanager
+def running(args, env):
+    child = subprocess.Popen(args, env=env)
+    try:
+        yield child
+    finally:
+        if child.poll() is None:
+            child.kill()
+        child.wait()
 
 
 def exercise(executable, output):
@@ -38,7 +50,7 @@ def exercise(executable, output):
         for density in ("compact", "comfortable", "spacious"):
             (hub_dir / "registry.ini").write_text(f"[General]\nschema=1\ndensity={density}\n"
                                                    "[favorite]\nluna=true\n[name]\nluna=Moon Studio\n")
-            with subprocess.Popen([executable], env=env) as child:
+            with running([executable], env=env) as child:
                 hub = window(x, "Acheron Hub", child.pid)
                 capture(hub, density)
                 sizes.append(hub.get_geometry().height)
@@ -69,7 +81,17 @@ def exercise(executable, output):
                     assert second_card_pixel() != before, "second card still visible after filtering"
                 close_window(x, hub)
                 assert child.wait(timeout=5) == 0
-        with subprocess.Popen([executable, "--profile", "luna"], env=env) as child:
+        for scale in (1.25, 1.5, 2):
+            scaled = dict(env, QT_SCALE_FACTOR=str(scale))
+            with running([executable], env=scaled) as child:
+                hub = window(x, "Acheron Hub", child.pid)
+                width = hub.get_geometry().width
+                assert abs(width - 480 * scale) <= 2, (scale, width)
+                if scale == 2:
+                    capture(hub, "scale-200")
+                close_window(x, hub)
+                assert child.wait(timeout=5) == 0
+        with running([executable, "--profile", "luna"], env=env) as child:
             chat = window(x, "Acheron Custom - luna", child.pid)
             capture(chat, "session-profile")
             close_window(x, chat)

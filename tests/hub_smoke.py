@@ -166,7 +166,10 @@ def exercise(exe, screenshots):
         if screenshots:
             time.sleep(.15)
             geo = hub.get_geometry()
-            subprocess.run(["import", "-window", "root", "-crop", f"{geo.width}x{geo.height}+60+60",
+            menu = popup.get_geometry()
+            width = max(geo.width, menu.x + menu.width - 60)
+            height = max(geo.height, menu.y + menu.height - 60)
+            subprocess.run(["import", "-window", "root", "-crop", f"{width}x{height}+60+60",
                             str(screenshots / "06-actions.png")], check=True)
         key(x, "Escape")
         until(lambda: invisible(popup), "account actions dismissed")

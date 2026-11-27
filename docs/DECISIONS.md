@@ -36,3 +36,9 @@ Aucun défaut critique identifié. L’emplacement du verrou, l’initialisation
 Un répertoire de profil constitue une unité de verrouillage et de trousseau. Une carte lance exactement cette unité. Un profil historique multi-compte conserve tous ses comptes dans la même fenêtre. Un alias modifie uniquement le registre du Hub. Les journaux, les comptes, les réglages et les entrées QtKeychain conservent leur identité.
 
 Les fenêtres peuvent survivre au Hub ou démarrer par un raccourci. Chaque session possède donc le serveur de contrôle et le marqueur de restauration de son profil. Les sessions publient séparément leurs aperçus par QSaveFile. Seul le Hub possède les préférences communes. Cette répartition évite les conflits entre la publication d’un avatar et un renommage. [Protocole et récupération](HUB.md)
+
+## #003 — ordre, préférences et raccourcis
+
+Le tri utilise les identifiants des répertoires de profils. Les entrées inconnues ou répétées dans l’ordre stocké sont ignorées. Un tri stable conserve l’ordre relatif en cas d’égalité et sépare les favoris. Filtrer les cartes ne réécrit pas les préférences. Les clés ajoutées sont facultatives dans le schéma 1.
+
+Le raccourci Windows utilise IShellLinkW et IPersistFile. Le programme transmet séparément le chemin de l’exécutable et les arguments. Il enregistre un fichier temporaire sur le même volume, puis le publie avec MoveFileW, qui refuse une destination existante.

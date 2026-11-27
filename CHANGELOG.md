@@ -1,5 +1,12 @@
 # Journal d’Acheron Custom
 
+## Mission #003 — Organisation et ergonomie
+
+- Les favoris occupent le haut du Hub. Les cartes peuvent être déplacées à la souris ou au clavier, recherchées par nom ou pseudo et triées depuis les paramètres.
+- Les paramètres proposent trois densités. Une commande dans la barre de menus de la messagerie identifie le profil et rappelle le Hub.
+- Sous Windows, chaque profil propose la création d’un raccourci bureau vers la messagerie.
+- La sauvegarde des paramètres regroupe les modifications en une seule synchronisation et préserve un registre non vide dont le schéma manque.
+
 ## Mission #002 — Acheron Hub
 
 - Le lancement normal ouvre le Hub. Les raccourcis `--profile` conservent leur accès direct à la messagerie.

@@ -16,6 +16,7 @@ Une session publie sa propre fiche `hub-card.json` par remplacement atomique. El
 | Launching… | Un lancement est en cours. Le Hub attend son verrou et son serveur local. |
 | Connecting… | La session a signalé au moins un client en cours de connexion. |
 | Switch to window | La session répond et peut montrer sa fenêtre, y compris après réduction dans la zone de notification. |
+| Connection error | La passerelle a signalé une erreur fatale. Le bouton rappelle la fenêtre existante. |
 | Reconnect | Le compte unique a signalé un échec du trousseau ou un refus d’authentification. Ouvre le gestionnaire natif pour se reconnecter. |
 | In use | Un verrou existe et la session ne répond pas encore au protocole. Le Hub conserve le verrou et évite une seconde instance. |
 | Retry | Le lancement a échoué ou aucun verrou n’est apparu dans le délai de 15 secondes. |
@@ -31,10 +32,18 @@ Une requête ASCII et sa réponse occupent chacune une ligne terminée par LF, d
 | Destinataire | Requête | Réponse ou effet |
 | --- | --- | --- |
 | Hub ou session | `activate` | `ok`. Montre, restaure et demande d’activer la fenêtre. Une demande d’attention accompagne l’activation. |
-| Session | `status` | `window`, `connecting` ou `needs-auth`. |
+| Session | `status` | `window`, `connecting`, `gateway-error` ou `needs-auth`. |
 | Session | `login` | `ok`. Ouvre la gestion des comptes dans la fenêtre concernée. |
 | Session | `close` | `ok`. Quitte normalement et retire le marqueur de restauration. |
 | Session | `suspend` | `ok`. Quitte normalement et conserve le marqueur. |
 | Tous | Version ou requête inconnue | `error`. Une trame trop longue provoque la déconnexion. |
 
 Les verrous Qt du Hub et des profils sont indépendants. Seul leur propriétaire démarre le serveur correspondant. Le Hub surveille les répertoires avec QFileSystemWatcher et réinterroge les sessions actives ou en démarrage toutes les deux secondes. Une perte de réponse laisse le profil occupé tant que son verrou existe. Une session ancienne sans serveur local reste accessible par la barre des tâches. La présence d’une fenêtre n’atteste pas une authentification réussie.
+
+## Organiser les cartes
+
+Dans le menu **⋯**, **Favorite** place un profil dans le premier groupe. Déposer une carte sur une autre du même groupe lui attribue sa position. Au clavier, atteindre **⋯** avec Tab, ouvrir le menu avec Espace et choisir **Move up** ou **Move down**. Une réorganisation revient au tri personnalisé. Les paramètres proposent aussi le tri par alias ou par dernière ouverture ou activation demandée depuis le Hub. Les nouveaux profils suivent les profils déjà ordonnés.
+
+**Find** (Ctrl+F) recherche dans l’identifiant technique, l’alias et le pseudo local sans distinction de casse. Un second appui referme la recherche. **Settings → Card density** permet de choisir Compact, Comfortable ou Spacious. Les anciennes préférences utilisent Comfortable. La messagerie affiche l’alias et la couleur lus au démarrage dans un bouton qui ramène au Hub. Le titre conserve l’identifiant du profil et le pseudo du compte actif quand il est connu.
+
+Sous Windows, **Create desktop shortcut** crée `Acheron - <profil>.lnk` dans le bureau de l’utilisateur. La cible est le binaire courant, avec `--profile <identifiant>`. Si le binaire change d’emplacement, recréer le raccourci depuis sa nouvelle installation.

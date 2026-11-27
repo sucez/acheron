@@ -880,12 +880,12 @@ if(FFMPEG_RUNTIME_DLLS)
     )
 endif()
 
-# curl-impersonate's windows release keeps its dll beside the import library
 if(WIN32)
     target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp)
     target_link_libraries(acheron PRIVATE ole32 shell32 uuid)
 endif()
 
+# curl-impersonate's windows release keeps its dll beside the import library
 if(WIN32 AND CURL_LIBRARY MATCHES "_imp\\.lib$")
     string(REGEX REPLACE "_imp\\.lib$" ".dll" _curl_runtime_dll "${CURL_LIBRARY}")
     if(EXISTS "${_curl_runtime_dll}")
