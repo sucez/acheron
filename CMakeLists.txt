@@ -531,6 +531,11 @@ else()
 endif()
 
 if(BUILD_TESTS)
+    qt_add_executable(TestProfile tests/tst_Profile.cpp)
+    target_include_directories(TestProfile PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(TestProfile PRIVATE Qt::Core Qt::Test)
+    add_test(NAME ProfileTests COMMAND TestProfile)
+
     qt_add_executable(TestMarkdown tests/tst_Markdown.cpp src/Core/Markdown/Parser.cpp
         src/Core/EmojiSegmenter.cpp src/Core/Snowflake.cpp)
     target_link_libraries(TestMarkdown PRIVATE Qt::Core Qt::Test)
