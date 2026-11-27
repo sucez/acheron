@@ -54,3 +54,5 @@ ctest --test-dir build -C MinSizeRel -R '^WindowsTokenStoreTests$' --no-tests=er
 ```
 
 Qt Test utilise le vrai TokenStore, deux profils temporaires nommés avec un suffixe aléatoire, le même identifiant synthétique et des valeurs fictives. Il vérifie la lecture, le remplacement et la suppression par profil. Le nettoyage tente les deux suppressions même après un échec d’assertion. CTest limite le test à 30 secondes.
+
+CI qualification: run the existing build matrix on this temporary branch, including WindowsTokenStoreTests. Results are pending; this note does not certify the test.
