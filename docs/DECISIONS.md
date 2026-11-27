@@ -30,3 +30,9 @@ Aucun défaut critique identifié. L’emplacement du verrou, l’initialisation
 **Important, hérité de l’amont.** Si un proxy utilise un mot de passe, AccountRepository conserve son URL sérialisée dans la base du profil. ProxyConfig encode les caractères pour une URL, ce qui est réversible. L’isolation entre profils limite les collisions mais laisse les secrets du proxy lisibles pour qui a accès à cette base. Une migration vers le trousseau préserverait la reconnexion et demanderait de gérer les écritures partielles et les anciennes bases. Une saisie à chaque connexion éviterait la migration au prix de la reconnexion automatique. Cette décision dépasse la correction du multi-instance.
 
 **Mineur, hérité de l’amont.** En supprimant un compte, AccountRepository tente la suppression du jeton puis efface la ligne SQLite même si le trousseau signale un échec. Une entrée orpheline peut subsister dans le profil. Un retour explicite de l’échec à l’interface aiderait à réessayer cette suppression.
+
+## #002 — association compte, carte et processus
+
+Un répertoire de profil constitue une unité de verrouillage et de trousseau. Une carte lance exactement cette unité. Un profil historique multi-compte conserve tous ses comptes dans la même fenêtre. Un alias modifie uniquement le registre du Hub. Les journaux, les comptes, les réglages et les entrées QtKeychain conservent leur identité.
+
+Les fenêtres peuvent survivre au Hub ou démarrer par un raccourci. Chaque session possède donc le serveur de contrôle et le marqueur de restauration de son profil. Les sessions publient séparément leurs aperçus par QSaveFile. Seul le Hub possède les préférences communes. Cette répartition évite les conflits entre la publication d’un avatar et un renommage. [Protocole et récupération](HUB.md)

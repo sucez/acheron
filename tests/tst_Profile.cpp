@@ -1,4 +1,6 @@
 #include "Core/Profile.hpp"
+#include <QFile>
+#include <QTemporaryDir>
 #include <QTest>
 
 using namespace Acheron::Core::Profile;
@@ -13,6 +15,19 @@ private slots:
         QCOMPARE(fromArguments({"--profile", "A_1-B"}), QStringLiteral("a_1-b"));
         QCOMPARE(fromArguments({"--profile=SECONDARY"}), QStringLiteral("secondary"));
         QCOMPARE(canonicalName(QString(32, 'Z')), QString(32, 'z'));
+    }
+
+    void discoverSavedNames()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QDir root(temp.path());
+        for (const auto &name : {"Acheron-Custom-principal", "Acheron-Custom-2_demo",
+                                 "Acheron", "Acheron-Custom-", "Acheron-Custom-bad.name"})
+            QVERIFY(root.mkdir(name));
+        QFile file(root.filePath("Acheron-Custom-file"));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(savedNames(root), (QStringList{"2_demo", "principal"}));
     }
 
     void credentialNames()

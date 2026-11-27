@@ -14,6 +14,7 @@ xvfb-run -a ctest --test-dir "$dev/build" --no-tests=error --output-on-failure -
 | master du fork, 08dd089 | Référence de l’environnement | 21/21 suites réussies |
 | Prototype, a56e09f | Même configuration | 21/21 suites réussies |
 | Mission #001 | Mêmes suites, plus ProfileTests | 22/22 suites réussies |
+| Acheron Hub #002 | Mêmes suites, plus HubTests | 23/23 suites réussies |
 
 ProfileTests exerce la syntaxe, les bornes, la casse, les noms invalides et le format des clés de comptes selon la plateforme de compilation. L’exécution du backend de trousseau requiert une validation distincte.
 
@@ -38,11 +39,7 @@ Le scénario confirme les fenêtres de deux profils, leurs fichiers de verrou et
 
 ## Windows et fonctions connectées
 
-La page du run historique affiche huit tâches dans la matrice et une exécution réussie à `7e93796`. Le propriétaire rapporte avoir ouvert simultanément deux fenêtres avec des comptes distincts sur Windows. Ce résultat précède les correctifs #001. Le workflow actuel s’exécute sur les pushs vers master ou ci/** et les PR visant master. [Run de référence](https://github.com/sucez/acheron/actions/runs/45939597779)
-
-Pour qualifier la correction, utiliser un compte Windows jetable et des valeurs factices. Avec le backend Credential Store, vérifier les opérations d’écriture, de lecture et de suppression pour un même identifiant dans deux profils. Vérifier également qu’une ancienne entrée est préservée, qu’une fermeture dans la zone de notification conserve le verrou et que Quitter le libère. Effectuer les vérifications interactives complémentaires selon [CUSTOM-PROFILES](../CUSTOM-PROFILES.md).
-
-Les tests de cette mission couvrent Linux, Qt 5 et le client hors connexion. Les appels voix/vidéo, la capture, les notifications natives, la connexion Discord, le trousseau réel et Windows demandent leurs propres environnements.
+La direction technique a confirmé les huit compilations de la base `8d70603`. Sous Windows, MinSizeRel, RelWithDebInfo et Qt5 ont chacun réussi 42/42 tests et la configuration minimale 23/23. WindowsTokenStoreTests a réussi dans les quatre configurations. Ces résultats qualifient la base #001/#001-B. Le Hub demande une nouvelle exécution de la matrice.
 
 ### Test ciblé du trousseau Windows (#001-B)
 
@@ -54,3 +51,26 @@ ctest --test-dir build -C MinSizeRel -R '^WindowsTokenStoreTests$' --no-tests=er
 ```
 
 Qt Test utilise le vrai TokenStore, deux profils temporaires nommés avec un suffixe aléatoire, le même identifiant synthétique et des valeurs fictives. Il vérifie la lecture, le remplacement et la suppression par profil. Le nettoyage tente les deux suppressions même après un échec d’assertion. CTest limite le test à 30 secondes.
+
+
+## Hub #002 sous Linux
+
+`HubTests` vérifie la découverte, les noms uniques et l’alias stable. Deux processus écrivent simultanément des préférences distinctes. Le test couvre également un registre endommagé, l’interruption d’une écriture atomique de fiche et les messages IPC valides, mal formés ou trop longs.
+
+Sur un affichage Xvfb privé à échelle 100 %, le scénario suivant démarre le vrai binaire avec HOME, XDG et socket de session temporaires. L’identifiant de compte fictif 0 est rejeté par la session avant l’accès au trousseau ou au réseau. Pour obtenir les captures, fournir un répertoire de destination en second argument et disposer de la commande ImageMagick `import`.
+
+```sh
+. /workspace/.acheron-qt5/env.sh
+export PYTHONPATH="$dev/profile-test-deps/usr/lib/python3/dist-packages"
+xvfb-run -a /usr/bin/python3 tests/hub_smoke.py "$dev/build/acheron" /tmp/acheron-hub-captures
+```
+
+La vérification observe le Hub vide, un puis trois profils historiques, 19 profils avec défilement, un pseudo Unicode long, deux fenêtres et leurs verrous, un deuxième lancement du Hub, la fermeture et la redécouverte des sessions, la restauration après fermeture globale et la récupération après arrêt brutal. Le scénario exerce également le lancement groupé, son exclusion par carte, les démarrages sélectionné et par défaut, les archives et la confirmation de fermeture de deux sessions. Une copie jetable de l’exécutable sert à simuler un enfant qui se termine avant de prendre son verrou et à réessayer ensuite. Le script imprime le délai jusqu’à la première fenêtre X11 et les mesures Linux de RSS et de temps CPU sur deux secondes. La RSS additionnée peut compter plusieurs fois des pages partagées.
+
+## Qualification Windows de la branche Hub
+
+1. Compiler les configurations Windows Qt5/Qt6 et exécuter toute la suite CTest, en vérifiant la présence de HubTests, ProfileTests et WindowsTokenStoreTests. La configuration de tests est décrite dans [BUILD](BUILD.md).
+2. Dans un compte système d’essai, lancer deux fois le Hub, créer deux profils fictifs et ouvrir les deux fenêtres. Vérifier leurs titres, l’indépendance du Hub et l’absence de doublon en rappelant une fenêtre. Ouvrir également un ancien profil multi-compte.
+3. Avec un profil réservé à la qualification connectée, vérifier Login avec une entrée de trousseau valide, le parcours natif en cas de nouvelle authentification et l’actualisation du pseudo et de la miniature. Les scénarios automatisés restent hors ligne.
+4. Vérifier la réduction dans la zone de notification, l’activation ou le clignotement depuis une autre application, la fermeture normale et globale, puis la restauration. Ouvrir un raccourci `--profile` avec restauration activée et vérifier que seul ce profil démarre.
+5. Examiner à 100 %, 125 %, 150 % et 200 % les boutons, le défilement, le pseudo long et les fenêtres de préférences. Vérifier aussi la voix, la vidéo et les notifications dans les configurations qui les activent.

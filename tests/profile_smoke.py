@@ -9,18 +9,9 @@ import time
 from contextlib import ExitStack, closing
 from pathlib import Path
 
-from Xlib import X, XK, display, error, protocol
-from Xlib.ext import xtest
-
-
-def until(check, description):
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline:
-        value = check()
-        if value:
-            return value
-        time.sleep(0.05)
-    raise RuntimeError(f"Timed out waiting for {description}")
+from Xlib import X, display
+from functools import partial
+from x11_helpers import until, window as find_window, close_window as close_xwindow, key as send_key
 
 
 def main(executable):
@@ -31,6 +22,9 @@ def main(executable):
                    QT_QPA_PLATFORM="xcb", LC_ALL="C")
         x = display.Display()
         cleanup.callback(x.close)
+        window = partial(find_window, x)
+        close_window = partial(close_xwindow, x)
+        key = partial(send_key, x)
 
         def run(*args):
             child = subprocess.Popen([executable, *args], env=env)
@@ -43,40 +37,6 @@ def main(executable):
             cleanup.callback(stop)
             return child
 
-        def window(title, pid=None):
-            def find():
-                for win in x.screen().root.query_tree().children:
-                    try:
-                        label = win.get_full_property(x.intern_atom("_NET_WM_NAME"), X.AnyPropertyType)
-                        if not label or win.get_attributes().map_state != X.IsViewable:
-                            continue
-                        name = label.value.decode("utf-8")
-                        if name != title and not name.startswith(title + " — "):
-                            continue
-                        owner = win.get_full_property(x.intern_atom("_NET_WM_PID"), X.AnyPropertyType)
-                        if owner and (pid is None or owner.value[0] == pid):
-                            return win
-                    except error.BadWindow:
-                        continue
-            return until(find, title)
-
-        def close_window(win):
-            win.send_event(protocol.event.ClientMessage(
-                window=win, client_type=x.intern_atom("WM_PROTOCOLS"),
-                data=(32, [x.intern_atom("WM_DELETE_WINDOW"), X.CurrentTime, 0, 0, 0])))
-            x.flush()
-
-        def key(name, modifier=None):
-            def send(symbol, event):
-                xtest.fake_input(x, event, x.keysym_to_keycode(XK.string_to_keysym(symbol)))
-            if modifier:
-                send(modifier, X.KeyPress)
-            send(name, X.KeyPress)
-            send(name, X.KeyRelease)
-            if modifier:
-                send(modifier, X.KeyRelease)
-            x.sync()
-
         def profile(name):
             return root / "data" / "sucez" / f"Acheron-Custom-{name}"
 
@@ -85,7 +45,7 @@ def main(executable):
             close_window(window(title, child.pid))
             assert child.wait(timeout=5) == 1
 
-        first = run()
+        first = run("--profile", "principal")
         principal = window("Acheron Custom - principal", first.pid)
         second = run("--profile", "DeUx")
         other = window("Acheron Custom - deux", second.pid)
@@ -105,13 +65,20 @@ def main(executable):
         key("Home")
         key("Down")
         key("Return")
-        window("Open another profile", first.pid)
+        hub = window("Acheron Hub")
+        hub.set_input_focus(X.RevertToParent, X.CurrentTime)
+        key("n", "Control_L")
+        prompt = window("Add an account")
+        prompt.set_input_focus(X.RevertToParent, X.CurrentTime)
+        key("a", "Control_L")
         for letter in "menu":
             key(letter)
         key("Return")
         launched = window("Acheron Custom - menu")
+        close_window(window("Manage Accounts"))
         close_window(launched)
         until(lambda: not (profile("menu") / "profile.lock").exists(), "detached process shutdown")
+        close_window(hub)
 
         for win, width in [(principal, 920), (other, 1120)]:
             win.configure(width=width, height=680)
