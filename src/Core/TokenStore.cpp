@@ -29,7 +29,7 @@ QString TokenStore::describeKeychainFailure(const QString &keychainError)
 
 Result<void> TokenStore::saveToken(Snowflake accountId, const QString &token)
 {
-    QKeychain::WritePasswordJob job(SERVICE_NAME);
+    QKeychain::WritePasswordJob job(QCoreApplication::applicationName());
     job.setAutoDelete(false);
     job.setKey(keyForAccount(accountId));
     job.setTextData(token);
@@ -50,7 +50,7 @@ Result<void> TokenStore::saveToken(Snowflake accountId, const QString &token)
 
 Result<QString> TokenStore::loadToken(Snowflake accountId)
 {
-    QKeychain::ReadPasswordJob job(SERVICE_NAME);
+    QKeychain::ReadPasswordJob job(QCoreApplication::applicationName());
     job.setAutoDelete(false);
     job.setKey(keyForAccount(accountId));
 
@@ -74,7 +74,7 @@ Result<QString> TokenStore::loadToken(Snowflake accountId)
 
 bool TokenStore::deleteToken(Snowflake accountId)
 {
-    QKeychain::DeletePasswordJob job(SERVICE_NAME);
+    QKeychain::DeletePasswordJob job(QCoreApplication::applicationName());
     job.setAutoDelete(false);
     job.setKey(keyForAccount(accountId));
 
