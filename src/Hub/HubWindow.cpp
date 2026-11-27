@@ -24,6 +24,7 @@ QLabel#muted {color:#aaaabb}
 QLabel#cardName {font-size:15px;font-weight:bold}
 QLabel#notice {color:#f2b2ad}
 QFrame#card {background:#242631;border:1px solid #393b49;border-radius:10px}
+QFrame#card:hover {border-color:#686782}
 QPushButton,QToolButton {background:#323440;border:1px solid #454754;border-radius:6px;padding:7px 12px;color:#f5f4fa}
 QPushButton:hover,QToolButton:hover {background:#414452}
 QPushButton:focus,QToolButton:focus {border-color:#aaa4ff}
@@ -234,6 +235,9 @@ void HubWindow::render()
         item->widget()->deleteLater();
         delete item;
     }
+    const auto density = registry.option("density").toString();
+    const int padding = density == "compact" ? 7 : density == "spacious" ? 18 : 12;
+    cards->setSpacing(padding / 2 + 2);
     int visible = 0;
     for (const QString &id : registry.ordered()) {
         const auto state = sessions.state(id);
@@ -281,7 +285,7 @@ void HubWindow::render()
         });
         card->setObjectName("card");
         auto *row = new QHBoxLayout(card);
-        row->setContentsMargins(12, 12, 10, 12);
+        row->setContentsMargins(12, padding, 10, padding);
         const int savedColor = registry.option("color/" + id, -1).toInt();
         const auto color = AvatarColors.value(savedColor, AvatarColors.at(qHash(id, 0) % AvatarColors.size()));
         auto *avatar = label(display.left(1).toUpper());
@@ -290,6 +294,7 @@ void HubWindow::render()
         avatar->setFixedSize(36, 36);
         avatar->setAlignment(Qt::AlignCenter);
         avatar->setStyleSheet("background:" + color + ";border-radius:18px;font-weight:bold;font-size:16px");
+        avatar->setToolTip(tr("Drag to reorder within favorites or other accounts."));
         row->addWidget(avatar);
         auto *text = new QVBoxLayout;
         text->setSpacing(3);
@@ -321,6 +326,7 @@ void HubWindow::render()
         row->addWidget(button);
         auto *more = new QToolButton;
         more->setText(QStringLiteral("⋯"));
+        more->setToolTip(tr("Account actions"));
         more->setAccessibleName(tr("Actions for %1").arg(display));
         connect(more, &QToolButton::clicked, this, [this,id,more] { menu(id, more); });
         button->setProperty("hubAction", "open/" + id);
@@ -337,7 +343,7 @@ void HubWindow::render()
                            : tr("Add your first account to open a chat window. Each account has its own space."));
     if (visible && cards->count() == 0) intro->setText(tr("No matching accounts."));
     launchAll->setVisible(visible > 1);
-    const int targetHeight = qMin(245 + visible * 78, 650);
+    const int targetHeight = qMin(225 + visible * (44 + 2 * padding + cards->spacing()), 650);
     if (autoHeight == 0 || height() == autoHeight)
         resize(autoHeight ? width() : 480, targetHeight);
     autoHeight = targetHeight;
@@ -487,6 +493,13 @@ void HubWindow::preferences()
     dialog.setWindowTitle(tr("Hub settings"));
     auto *layout = new QVBoxLayout(&dialog);
     auto *form = new QFormLayout;
+    auto *density = new QComboBox;
+    density->addItem(tr("Compact"), "compact");
+    density->addItem(tr("Comfortable"), "comfortable");
+    density->addItem(tr("Spacious"), "spacious");
+    const int index = density->findData(registry.option("density"));
+    density->setCurrentIndex(index < 0 ? 1 : index);
+    form->addRow(tr("Card density"), density);
     auto *sort = new QComboBox;
     sort->addItem(tr("Custom order"), "custom");
     sort->addItem(tr("Name"), "name");
@@ -549,7 +562,7 @@ void HubWindow::preferences()
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     if (dialog.exec() == QDialog::Accepted) {
-        QVariantMap values{{"sort", sort->currentData()}, {"default", defaultId->currentData()}, {"startup", startup->currentData()},
+        QVariantMap values{{"density", density->currentData()}, {"sort", sort->currentData()}, {"default", defaultId->currentData()}, {"startup", startup->currentData()},
                            {"close", close->currentData()}};
         for (int i = 0; i < selected->count(); ++i) {
             const auto *item = selected->item(i);
