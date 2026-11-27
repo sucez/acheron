@@ -14,3 +14,11 @@ Each named profile uses a distinct application settings/data namespace and keych
 6. Remove an account in a test profile and verify the other profile and original installation are unaffected.
 
 This is an experimental change. Compilation alone does not validate session isolation or voice/notification behavior.
+
+## Compatibilité après l’audit #001
+
+Les mêmes options s’appliquent à `acheron` sous Linux. Le menu et les formes `--profile NOM` et `--profile=NOM` acceptent de 1 à 32 caractères ASCII. Les majuscules sont ramenées en minuscules après validation.
+
+**Mise à niveau Windows depuis le prototype.** La nouvelle version demande de renseigner à nouveau le jeton des comptes déjà configurés. L’ancienne clé pouvait appartenir à plusieurs profils ou à l’installation officielle. La nouvelle version laisse cette clé en place. Les fiches SQLite et les réglages existants sont conservés.
+
+Le verrou reste actif quand le processus est réduit dans la zone de notification. Pour libérer le profil, quitter le processus depuis son menu. Les profils d’un même utilisateur partagent les permissions du système. Voir [l’inventaire du stockage](docs/ARCHITECTURE.md) et [les tests automatisés hors connexion](docs/TESTING.md).
