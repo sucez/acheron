@@ -81,6 +81,20 @@ private slots:
         QVERIFY(!CardMetadata::read(temp.path()));
     }
 
+    void missingSchema()
+    {
+        QTemporaryDir dir;
+        QFile file(dir.filePath("registry.ini"));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("[General]\nstartup=selected\n");
+        file.close();
+        Registry registry(dir.path());
+        QVERIFY(!registry.usable());
+        QVERIFY(!registry.set("startup", "hub"));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), QByteArray("[General]\nstartup=selected\n"));
+    }
+
     void damagedPreferences()
     {
         QTemporaryDir temp;

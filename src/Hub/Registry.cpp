@@ -11,8 +11,10 @@ Registry::Registry(const QString &hubDir)
     : parent(QFileInfo(hubDir).absoluteDir()),
       settings(QDir(hubDir).filePath("registry.ini"), QSettings::IniFormat)
 {
-    if (!settings.contains("schema") && settings.status() == QSettings::NoError)
-        set("schema", 1);
+    if (settings.allKeys().isEmpty() && settings.status() == QSettings::NoError) {
+        settings.setValue("schema", 1);
+        settings.sync();
+    }
 }
 
 bool Registry::usable() const
@@ -45,9 +47,15 @@ QVariant Registry::option(const QString &key, const QVariant &fallback) const
 
 bool Registry::set(const QString &key, const QVariant &value)
 {
-    if (settings.status() != QSettings::NoError || settings.value("schema", 1).toInt() != 1)
+    return setOptions({{key, value}});
+}
+
+bool Registry::setOptions(const QVariantMap &values)
+{
+    if (!usable())
         return false;
-    settings.setValue(key, value);
+    for (auto it = values.begin(); it != values.end(); ++it)
+        settings.setValue(it.key(), it.value());
     settings.sync();
     return settings.status() == QSettings::NoError;
 }

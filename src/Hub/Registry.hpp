@@ -16,6 +16,7 @@ public:
     QString summary(const QString &id) const;
     QVariant option(const QString &key, const QVariant &fallback = {}) const;
     bool set(const QString &key, const QVariant &value);
+    bool setOptions(const QVariantMap &values);
     QString root() const { return parent.absolutePath(); }
     bool usable() const;
 

@@ -501,13 +501,14 @@ void HubWindow::preferences()
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     if (dialog.exec() == QDialog::Accepted) {
-        save("default", defaultId->currentData());
-        save("startup", startup->currentData());
-        save("close", close->currentData());
+        QVariantMap values{{"default", defaultId->currentData()}, {"startup", startup->currentData()},
+                           {"close", close->currentData()}};
         for (int i = 0; i < selected->count(); ++i) {
             const auto *item = selected->item(i);
-            save("selected/" + item->data(Qt::UserRole).toString(), item->checkState() == Qt::Checked);
+            values.insert("selected/" + item->data(Qt::UserRole).toString(), item->checkState() == Qt::Checked);
         }
+        if (!registry.setOptions(values))
+            QMessageBox::warning(this, windowTitle(), tr("Could not save Hub preferences."));
     }
 }
 
