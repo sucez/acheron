@@ -4,6 +4,11 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QStringList>
+#include <QProcess>
+#include <QRegularExpression>
 #include <QPointer>
 #include <QPushButton>
 #include <QSettings>
@@ -2888,6 +2893,27 @@ void MainWindow::setupMenu()
     auto *accountsAction = new QAction(tr("&Accounts"), this);
     connect(accountsAction, &QAction::triggered, this, &MainWindow::openAccountsWindow);
     viewMenu->addAction(accountsAction);
+
+    auto *profileAction = viewMenu->addAction(tr("Open another profile..."));
+    connect(profileAction, &QAction::triggered, this, [this] {
+        bool accepted = false;
+        const QString profile = QInputDialog::getText(
+                this, tr("Open another profile"),
+                tr("Profile name (for example: secondary):"), QLineEdit::Normal,
+                QString(), &accepted).trimmed().toLower();
+        if (!accepted)
+            return;
+        const QRegularExpression pattern(QStringLiteral("^[a-z0-9][a-z0-9_-]{0,31}$"));
+        if (!pattern.match(profile).hasMatch()) {
+            QMessageBox::warning(this, tr("Invalid profile"),
+                                 tr("Use 1-32 letters, digits, hyphens or underscores; start with a letter or digit."));
+            return;
+        }
+        if (!QProcess::startDetached(QCoreApplication::applicationFilePath(),
+                                     QStringList{QStringLiteral("--profile"), profile})) {
+            QMessageBox::warning(this, tr("Profile error"), tr("Could not start Acheron."));
+        }
+    });
 
     auto *settingsAction = new QAction(tr("&Settings"), this);
     connect(settingsAction, &QAction::triggered, this, &MainWindow::openSettingsWindow);
