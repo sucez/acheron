@@ -43,3 +43,14 @@ La page du run historique affiche huit tâches dans la matrice et une exécution
 Pour qualifier la correction, utiliser un compte Windows jetable et des valeurs factices. Avec le backend Credential Store, vérifier les opérations d’écriture, de lecture et de suppression pour un même identifiant dans deux profils. Vérifier également qu’une ancienne entrée est préservée, qu’une fermeture dans la zone de notification conserve le verrou et que Quitter le libère. Effectuer les vérifications interactives complémentaires selon [CUSTOM-PROFILES](../CUSTOM-PROFILES.md).
 
 Les tests de cette mission couvrent Linux, Qt 5 et le client hors connexion. Les appels voix/vidéo, la capture, les notifications natives, la connexion Discord, le trousseau réel et Windows demandent leurs propres environnements.
+
+### Test ciblé du trousseau Windows (#001-B)
+
+Sur un runner Windows avec QtKeychain et les dépendances de compilation décrites dans BUILD, exécuter depuis un répertoire source configuré pour MinSizeRel avec les tests activés.
+
+```powershell
+cmake --build build --config MinSizeRel --target TestWindowsTokenStore
+ctest --test-dir build -C MinSizeRel -R '^WindowsTokenStoreTests$' --no-tests=error --output-on-failure
+```
+
+Qt Test utilise le vrai TokenStore, deux profils temporaires nommés avec un suffixe aléatoire, le même identifiant synthétique et des valeurs fictives. Il vérifie la lecture, le remplacement et la suppression par profil. Le nettoyage tente les deux suppressions même après un échec d’assertion. CTest limite le test à 30 secondes.
