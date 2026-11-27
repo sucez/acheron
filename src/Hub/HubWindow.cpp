@@ -312,6 +312,7 @@ void HubWindow::render()
         switch (state) {
         case SessionManager::Launching: action = tr("Launching…"); break;
         case SessionManager::Connecting: action = tr("Connecting…"); break;
+        case SessionManager::GatewayError: action = tr("Connection error"); break;
         case SessionManager::NeedsAuth: action = tr("Reconnect"); break;
         case SessionManager::Open: action = tr("Switch to window"); break;
         case SessionManager::Locked: action = tr("In use"); break;
@@ -321,7 +322,7 @@ void HubWindow::render()
         auto *button = new QPushButton(action);
         if (state == SessionManager::Open || state == SessionManager::Connecting)
             button->setObjectName("running");
-        else if (state == SessionManager::Failed || state == SessionManager::NeedsAuth)
+        else if (state == SessionManager::Failed || state == SessionManager::GatewayError || state == SessionManager::NeedsAuth)
             button->setObjectName("failed");
         button->setEnabled(state != SessionManager::Launching);
         connect(button, &QPushButton::clicked, this, [this,id] { sessions.open(id); });

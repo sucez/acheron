@@ -66,7 +66,7 @@ bool SessionManager::busy(const QString &id) const
 bool SessionManager::controllable(const QString &id) const
 {
     const auto value = state(id);
-    return value == Open || value == Connecting || value == NeedsAuth;
+    return value == Open || value == Connecting || value == NeedsAuth || value == GatewayError;
 }
 
 void SessionManager::refresh()
@@ -109,13 +109,9 @@ void SessionManager::refresh()
             probing.remove(id);
             if (!locked(id))
                 return;
-            if (reply == "window" || reply == "connecting" || reply == "needs-auth") {
+            const State state = reportedState(reply);
+            if (state != Locked) {
                 deadlines.remove(id);
-                State state = Open;
-                if (reply == "connecting")
-                    state = Connecting;
-                else if (reply == "needs-auth")
-                    state = NeedsAuth;
                 setState(id, state);
             } else if (deadlines.value(id) <= QDateTime::currentMSecsSinceEpoch()) {
                 deadlines.remove(id);

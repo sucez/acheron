@@ -12,7 +12,15 @@ class SessionManager : public QObject
     Q_OBJECT
 public:
     explicit SessionManager(Registry &registry);
-    enum State { Closed, Launching, Open, Connecting, NeedsAuth, Locked, Failed };
+    enum State { Closed, Launching, Open, Connecting, NeedsAuth, GatewayError, Locked, Failed };
+    static State reportedState(const QByteArray &reply)
+    {
+        if (reply == "window") return Open;
+        if (reply == "connecting") return Connecting;
+        if (reply == "needs-auth") return NeedsAuth;
+        if (reply == "gateway-error") return GatewayError;
+        return Locked;
+    }
     State state(const QString &id) const { return states.value(id, Closed); }
     bool controllable(const QString &id) const;
     void refresh();

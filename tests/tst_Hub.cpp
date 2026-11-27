@@ -1,4 +1,5 @@
 #include "Hub/Registry.hpp"
+#include "Hub/SessionManager.hpp"
 #include "Hub/DesktopShortcut.hpp"
 #include "Hub/CardMetadata.hpp"
 #include <QProcess>
@@ -80,6 +81,15 @@ private slots:
         file.write(QByteArray(32769, 'x'));
         file.close();
         QVERIFY(!CardMetadata::read(temp.path()));
+    }
+
+    void reportedSessionStates()
+    {
+        QCOMPARE(SessionManager::reportedState("window"), SessionManager::Open);
+        QCOMPARE(SessionManager::reportedState("needs-auth"), SessionManager::NeedsAuth);
+        QCOMPARE(SessionManager::reportedState("gateway-error"), SessionManager::GatewayError);
+        QCOMPARE(SessionManager::reportedState("connecting"), SessionManager::Connecting);
+        QCOMPARE(SessionManager::reportedState("unknown"), SessionManager::Locked);
     }
 
     void shortcuts()

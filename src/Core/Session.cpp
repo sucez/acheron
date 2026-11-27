@@ -100,6 +100,8 @@ void Session::startInstance(const AccountInfo &acc)
                 }
             });
 
+    connect(instance->discord(), &Discord::Client::errorOccurred, this,
+            [this, accountId] { emit gatewayFailed(accountId); });
     connect(instance, &ClientInstance::authenticationFailed, this,
             [this, accountId] { emit authenticationRequired(accountId); });
 
