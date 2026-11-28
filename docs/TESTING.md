@@ -92,3 +92,5 @@ Sous Linux Qt 5.15, les 23 suites CTest et les trois scénarios X11 ont réussi 
 Avec Python 3, CTest inclut `BuildIdentity` (exécutable réel, source, canal et commit) et `DistributionTests`. Depuis la racine, `python3 tests/test_distribution.py` exerce les canaux, les noms, le contenu du ZIP, les champs invalides et la modification des octets sur un jeu de fichiers fictifs. Tester ensuite un dispatch Windows avec **publish** désactivé et contrôler les artefacts sur un poste propre. [Qualification du paquet](RELEASING.md)
 
 Pour #004, la validation Linux Qt 5.15 a réussi sur les quatre suites ciblées BuildIdentity, DistributionTests, ProfileTests et HubTests. Les cinq tests Python utilisent des archives fictives. Un essai X11 a vérifié le contenu exact copié depuis About. Le YAML, les dépendances des jobs, les permissions déclarées et la syntaxe Bash de publication ont été contrôlés localement. L’exécution GitHub Actions sur Windows et le démarrage de la distribution autonome restent à qualifier.
+
+CI qualification of mission #004 on the temporary branch. Public release is not authorized; packaging qualification remains separate.
