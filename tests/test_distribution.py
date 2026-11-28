@@ -33,7 +33,7 @@ class DistributionTests(unittest.TestCase):
 
     def test_channels(self):
         release.identity("0.4.0-preview.2", "preview", "f" * 40)
-        for version, channel in [("01.2.3", "stable"), ("0.4.0", "preview"), ("0.4.0-preview.1", "stable"),
+        for version, channel in [("01.2.3", "stable"), ("65536.2.3", "stable"), ("0.4.0", "preview"), ("0.4.0-preview.1", "stable"),
                                  ("0.4.0-preview.01", "preview"), ("1.2.3", "development"), ("../1.2.3", "stable")]:
             with self.subTest(version=version, channel=channel), self.assertRaises(ValueError):
                 release.identity(version, channel, "1" * 40)

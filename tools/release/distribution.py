@@ -15,6 +15,8 @@ def identity(version, channel, commit):
     suffix = {"stable": "", "preview": rf"-preview\.{NUMBER}"}.get(channel)
     if suffix is None or not re.fullmatch(rf"{NUMBER}\.{NUMBER}\.{NUMBER}{suffix}", version):
         raise ValueError("Invalid release version/channel")
+    if any(int(part) > 65535 for part in version.split("-")[0].split(".")):
+        raise ValueError("Version exceeds Windows VERSIONINFO range")
     if not re.fullmatch("[a-f0-9]{40}", commit):
         raise ValueError("Expected a full Git commit")
     return dict(version=version, channel=channel, commit=commit, architecture="x64")
