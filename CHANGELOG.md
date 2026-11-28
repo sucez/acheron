@@ -1,5 +1,10 @@
 # Journal d’Acheron Custom
 
+## Mission #004 — distribution, candidate 0.4.0
+
+- Le Hub affiche et copie la version, le canal, le commit et l’architecture.
+- La préparation Windows MinSizeRel génère une archive portable, un manifeste v1 et ses empreintes. La publication demande une action explicite du mainteneur.
+
 ## Mission #003 — Organisation et ergonomie
 
 - Les favoris occupent le haut du Hub. Les cartes peuvent être déplacées à la souris ou au clavier, recherchées par nom ou pseudo et triées depuis les paramètres.

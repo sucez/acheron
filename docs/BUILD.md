@@ -51,3 +51,7 @@ ctest --test-dir build -C MinSizeRel --output-on-failure --timeout 600
 ```
 
 Le répertoire `ffmpeg` correspond au dossier extrait tel que renommé par le workflow. Pour distribuer l’application, suivre également les étapes windeployqt et de copie des DLL et ressources. Les variantes RelWithDebInfo, minimale et Qt 5.15.2 ont leurs propres étapes de CI. Les valeurs Windows par défaut, notamment voix et vidéo, sont conservées.
+
+## Métadonnées de distribution
+
+Le canal local par défaut est `development`. Pour une compilation de distribution, ajouter `-DACHERON_CHANNEL=stable` ou `preview` à la configuration correspondante et contrôler `acheron --build-info`. Le workflow `windows-full.yml` partage la recette Windows complète avec la CI. [Procédure de publication](RELEASING.md)
