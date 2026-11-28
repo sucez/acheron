@@ -18,7 +18,16 @@ if(FFMPEG_FROM_VCPKG)
     list(APPEND VCPKG_MANIFEST_FEATURES "ffmpeg")
 endif()
 
-project(acheron LANGUAGES CXX)
+include(cmake/Version.cmake)
+project(acheron VERSION ${ACHERON_NUMERIC_VERSION} LANGUAGES CXX)
+# Refresh only the build identity translation unit when HEAD moves.
+set(build_info "${CMAKE_CURRENT_BINARY_DIR}/BuildInfo.cpp")
+add_custom_target(acheron_build_identity
+    COMMAND "${CMAKE_COMMAND}" "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}" "-DOUTPUT=${build_info}"
+            "-DACHERON_VERSION=${ACHERON_VERSION}" "-DACHERON_CHANNEL=${ACHERON_CHANNEL}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuildInfo.cmake"
+    BYPRODUCTS "${build_info}"
+    VERBATIM)
 
 include(qt.cmake)
 
@@ -195,6 +204,7 @@ endif()
 
 set(PROJECT_SOURCES
     resources.qrc
+    ${CMAKE_CURRENT_BINARY_DIR}/BuildInfo.cpp
     src/main.cpp
     src/Hub/HubWindow.cpp
     src/Hub/CardMetadata.cpp
@@ -528,6 +538,7 @@ else()
 endif()
 
 qt_add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
+add_dependencies(${PROJECT_NAME} acheron_build_identity)
 
 target_include_directories(${PROJECT_NAME} PRIVATE vendor/emoji-segmenter)
 if(TARGET unofficial::nayuki-qr-code-generator::nayuki-qr-code-generator)
@@ -537,6 +548,12 @@ else()
 endif()
 
 if(BUILD_TESTS)
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME BuildIdentity COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_build_identity.py"
+            "$<TARGET_FILE:${PROJECT_NAME}>" "${ACHERON_VERSION}" "${ACHERON_CHANNEL}")
+        add_test(NAME DistributionTests COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_distribution.py")
+    endif()
     qt_add_executable(TestProfile tests/tst_Profile.cpp)
     target_include_directories(TestProfile PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(TestProfile PRIVATE Qt::Core Qt::Test)
@@ -881,7 +898,10 @@ if(FFMPEG_RUNTIME_DLLS)
 endif()
 
 if(WIN32)
-    target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp)
+    configure_file(cmake/acheron.rc.in acheron.rc @ONLY)
+    enable_language(RC)
+    add_library(acheron_version_resource OBJECT ${CMAKE_CURRENT_BINARY_DIR}/acheron.rc)
+    target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp $<TARGET_OBJECTS:acheron_version_resource>)
     target_link_libraries(acheron PRIVATE ole32 shell32 uuid)
 endif()
 

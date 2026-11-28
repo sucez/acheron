@@ -1,4 +1,7 @@
 #include "App.hpp"
+#include "BuildInfo.hpp"
+#include <QJsonDocument>
+#include <cstdio>
 #include "Hub/HubWindow.hpp"
 #include "Hub/SessionControl.hpp"
 #include "UI/MainWindow.hpp"
@@ -82,6 +85,12 @@ int main(int argc, char *argv[])
     QStringList arguments;
     for (int i = 1; i < argc; ++i)
         arguments.append(QString::fromLocal8Bit(argv[i]));
+    const auto info = buildInfo();
+    QApplication::setApplicationVersion(info.value("version").toString());
+    if (arguments == QStringList{"--build-info"}) {
+        const auto json = QJsonDocument(info).toJson(QJsonDocument::Compact);
+        return std::puts(json.constData()) < 0 ? 1 : 0;
+    }
     const QString profile = Core::Profile::fromArguments(arguments);
     const bool hub = std::none_of(arguments.cbegin(), arguments.cend(), [](const QString &arg) {
         return arg == QStringLiteral("--profile") || arg.startsWith(QStringLiteral("--profile="));

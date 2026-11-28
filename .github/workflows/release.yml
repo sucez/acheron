@@ -1,0 +1,81 @@
+name: Acheron Custom release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact value of VERSION at this commit
+        required: true
+        type: string
+      channel:
+        description: Distribution channel
+        required: true
+        type: choice
+        options: [preview, stable]
+      publish:
+        description: Publish using the existing matching release tag
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'sucez/acheron' && (github.ref == 'refs/heads/feature/multi-instance' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate source and request
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 tests/test_distribution.py
+          python3 tools/release/distribution.py check "$VERSION" "$CHANNEL" "$GITHUB_SHA"
+
+  build:
+    needs: validate
+    uses: ./.github/workflows/windows-full.yml
+    with:
+      version: ${{ inputs.version }}
+      channel: ${{ inputs.channel }}
+      build_type: MinSizeRel
+
+  publish:
+    if: inputs.publish
+    needs: build
+    environment: release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-assets
+          path: dist
+      - name: Verify assets and publish
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 tools/release/distribution.py verify "$VERSION" "$CHANNEL" "$GITHUB_SHA"
+          tag="v$VERSION"
+          gh auth setup-git
+          git fetch --depth=1 origin "refs/tags/$tag:refs/tags/$tag"
+          test "$(git rev-parse "$tag^{commit}")" = "$GITHUB_SHA"
+          args=(--draft --verify-tag --generate-notes --title "Acheron Custom $VERSION")
+          if [[ "$CHANNEL" == preview ]]; then args+=(--prerelease); fi
+          gh release create "$tag" "${args[@]}" "dist/Acheron-Custom-$VERSION-windows-x64.zip" dist/manifest.json dist/SHA256SUMS
+          gh release edit "$tag" --draft=false

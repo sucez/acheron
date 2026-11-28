@@ -1,0 +1,10 @@
+#include "BuildInfo.hpp"
+#include <QSysInfo>
+
+QJsonObject Acheron::buildInfo()
+{
+    auto arch = QSysInfo::buildCpuArchitecture();
+    if (arch == "x86_64") arch = "x64";
+    return {{"version", "@ACHERON_VERSION@"}, {"channel", "@ACHERON_CHANNEL@"},
+            {"commit", "@ACHERON_COMMIT@"}, {"architecture", arch}};
+}

@@ -42,3 +42,7 @@ Les fenêtres peuvent survivre au Hub ou démarrer par un raccourci. Chaque sess
 Le tri utilise les identifiants des répertoires de profils. Les entrées inconnues ou répétées dans l’ordre stocké sont ignorées. Un tri stable conserve l’ordre relatif en cas d’égalité et sépare les favoris. Filtrer les cartes ne réécrit pas les préférences. Les clés ajoutées sont facultatives dans le schéma 1.
 
 Le raccourci Windows utilise IShellLinkW et IPersistFile. Le programme transmet séparément le chemin de l’exécutable et les arguments. Il enregistre un fichier temporaire sur le même volume, puis le publie avec MoveFileW, qui refuse une destination existante.
+
+## #004 — identité et publication
+
+Le numéro de distribution est indépendant du nom Qt utilisé par les profils et QtKeychain. La publication réutilise le job Windows complet pour conserver ses options multimédias. Le déclenchement manuel et le tag préexistant séparent l’autorisation de publication du simple push. Le manifeste décrit les octets effectivement distribués. La signature et le modèle de confiance relèvent de la mission updater. [Contrat du manifeste](RELEASING.md)

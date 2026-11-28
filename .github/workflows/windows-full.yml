@@ -1,0 +1,188 @@
+name: Full Windows build
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        type: string
+        required: true
+      channel:
+        type: string
+        default: development
+      version:
+        type: string
+        default: ''
+permissions:
+  contents: read
+
+env:
+  CURL_IMPERSONATE_VERSION: v2.1.1
+  FFMPEG_RELEASE_TAG: autobuild-2026-07-31-14-10
+  FFMPEG_WINDOWS_BUILD: ffmpeg-n8.1.2-34-g9b6c8969e0-win64-lgpl-shared-8.1
+  FFMPEG_WINDOWS_SHA256: c222a490dde4e7059f45495deef6bfb98dbcacc2b43df5b607546252037aa95c
+  AQT_FOR_WINDOWS_QT6: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-archives
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    env:
+      BUILD_TYPE: ${{ inputs.build_type }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.12.0'
+          modules: qtimageformats
+          cache: true
+          aqtsource: ${{ env.AQT_FOR_WINDOWS_QT6 }}
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          git -C vendor/vcpkg fetch --unshallow
+          vendor/vcpkg/bootstrap-vcpkg.bat
+          New-Item -ItemType Directory -Force $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Restore vcpkg packages
+        id: vcpkg-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-archives-x64-windows-static-md-vs2022-qt6-${{ github.run_id }}
+          # the qt5 job's archives come from the same compiler and hold all of these
+          restore-keys: |
+            vcpkg-archives-x64-windows-static-md-vs2022-qt6-
+            vcpkg-archives-x64-windows-static-md-ffmpeg-vs2022-
+
+      - name: Install curl-impersonate
+        shell: pwsh
+        run: |
+          $url = "https://github.com/lexiforest/curl-impersonate/releases/download/${{ env.CURL_IMPERSONATE_VERSION }}/libcurl-impersonate-${{ env.CURL_IMPERSONATE_VERSION }}.x86_64-win32.tar.gz"
+          Invoke-WebRequest -Uri $url -OutFile libcurl-impersonate.tar.gz
+          New-Item -ItemType Directory -Path curl-impersonate -Force
+          tar -xzf libcurl-impersonate.tar.gz -C curl-impersonate
+
+      - name: Install ffmpeg
+        shell: pwsh
+        run: |
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/${{ env.FFMPEG_RELEASE_TAG }}/${{ env.FFMPEG_WINDOWS_BUILD }}.zip"
+          Invoke-WebRequest -Uri $url -OutFile ffmpeg.zip
+
+          $actual = (Get-FileHash ffmpeg.zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne "${{ env.FFMPEG_WINDOWS_SHA256 }}") {
+            throw "ffmpeg archive hash mismatch: expected ${{ env.FFMPEG_WINDOWS_SHA256 }}, got $actual"
+          }
+
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg-extract -Force
+
+          $inner = Get-ChildItem -Path ffmpeg-extract -Directory | Select-Object -First 1
+          Move-Item -Path $inner.FullName -Destination ffmpeg
+
+      # ninja: msbuild only started on the app's own sources once every other project was built
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        env:
+          BUILD_CHANNEL: ${{ inputs.channel }}
+        shell: pwsh
+        run: |
+          $curlDir = "${{ github.workspace }}/curl-impersonate"
+          $ffmpegDir = "${{ github.workspace }}/ffmpeg"
+          cmake -B build -S . `
+            -G "Ninja Multi-Config" `
+            -DCMAKE_CONFIGURATION_TYPES=$env:BUILD_TYPE `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR;$ffmpegDir" `
+            -DCURL_INCLUDE_DIR="$curlDir/include" `
+            -DCURL_LIBRARY="$curlDir/lib/libcurl-impersonate_imp.lib" `
+            -DACHERON_CHANNEL="$env:BUILD_CHANNEL" `
+            -DBUILD_TESTS=ON
+
+      - name: Prune vcpkg packages
+        id: vcpkg-prune
+        continue-on-error: true
+        shell: bash
+        run: python .github/prune_vcpkg_archives.py build/vcpkg_installed vcpkg-archives vcpkg-archives-x64-windows-static-md-vs2022-qt6- >> "$GITHUB_OUTPUT"
+
+      - name: Save vcpkg packages
+        if: steps.vcpkg-prune.outputs.key && steps.vcpkg-prune.outputs.key != steps.vcpkg-restore.outputs.cache-matched-key
+        uses: actions/cache/save@v4
+        with:
+          path: vcpkg-archives
+          key: ${{ steps.vcpkg-prune.outputs.key }}
+
+      - name: Build
+        run: cmake --build build --config $env:BUILD_TYPE --parallel
+
+      # the voice client's tests load the curl-impersonate DLL, which is only put beside the
+      # executables when the artifact is made. without it Windows shows a dialog and waits
+      - name: Test
+        shell: pwsh
+        run: |
+          $env:PATH = "${{ github.workspace }}/curl-impersonate/lib;$env:PATH"
+          # without this Qt Test writes its report to the debugger, and a failure shows nothing here
+          $env:QT_FORCE_STDERR_LOGGING = "1"
+          ctest --test-dir build -C $env:BUILD_TYPE --no-tests=error --output-on-failure --timeout 600
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Deploy Qt
+        if: inputs.channel == 'development'
+        shell: pwsh
+        run: |
+          $exe = "${{ github.workspace }}/build/$env:BUILD_TYPE/acheron.exe"
+          windeployqt --no-translations --no-opengl-sw --no-system-d3d-compiler $exe
+
+      - name: Prepare artifact
+        if: inputs.channel == 'development'
+        shell: pwsh
+        run: |
+          $out = "acheron-windows-$env:BUILD_TYPE"
+          $binDir = "build/$env:BUILD_TYPE"
+          $curlDir = "${{ github.workspace }}/curl-impersonate"
+          New-Item -ItemType Directory -Path $out -Force
+
+          # Copy build output (binary, certs/, fonts/, and everything windeployqt placed alongside it)
+          Copy-Item "$binDir/*" $out -Recurse -Force
+
+          # Copy curl-impersonate DLL
+          Copy-Item "$curlDir/lib/*.dll" $out -Force
+
+          # Drop build leftovers, and the plugins the app can never reach: main.cpp
+          # forces the Fusion style and Storage only ever opens QSQLITE
+          Remove-Item "$out/Test*.exe","$out/*.pdb","$out/*.lib","$out/styles","$out/generic" `
+            -Recurse -ErrorAction SilentlyContinue
+          Get-ChildItem "$out/sqldrivers" -Exclude qsqlite.dll | Remove-Item
+
+      - name: Upload artifact
+        if: inputs.channel == 'development'
+        uses: actions/upload-artifact@v7
+        with:
+          name: acheron-windows-${{ inputs.build_type }}
+          path: acheron-windows-${{ inputs.build_type }}
+
+
+      - name: Stage and verify the release
+        if: inputs.channel != 'development'
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          if ((git rev-parse HEAD) -ne $env:GITHUB_SHA) { throw "Source SHA mismatch" }
+          if ((Get-Item build/MinSizeRel/acheron.exe).VersionInfo.ProductVersion -cne $env:VERSION) { throw "PE version mismatch" }
+          python tools/release/stage_windows.py $env:VERSION $env:CHANNEL $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/release/distribution.py create $env:VERSION $env:CHANNEL $env:GITHUB_SHA
+
+      - uses: actions/upload-artifact@v7
+        if: inputs.channel != 'development'
+        with:
+          name: release-assets
+          path: dist/
+          if-no-files-found: error
