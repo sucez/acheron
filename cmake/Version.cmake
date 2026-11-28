@@ -1,0 +1,22 @@
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" ACHERON_VERSION)
+string(STRIP "${ACHERON_VERSION}" ACHERON_VERSION)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+set(number "(0|[1-9][0-9]*)")
+if(NOT ACHERON_VERSION MATCHES "^(${number}[.]${number}[.]${number})(-preview[.]${number})?$")
+    message(FATAL_ERROR "Invalid VERSION (expected X.Y.Z or X.Y.Z-preview.N)")
+endif()
+set(ACHERON_NUMERIC_VERSION "${CMAKE_MATCH_1}")
+set(ACHERON_CHANNEL development CACHE STRING "Distribution channel")
+if(NOT ACHERON_CHANNEL MATCHES "^(stable|preview|development)$" OR
+   (ACHERON_CHANNEL STREQUAL "stable" AND ACHERON_VERSION MATCHES "-") OR
+   (ACHERON_CHANNEL STREQUAL "preview" AND NOT ACHERON_VERSION MATCHES "-preview"))
+    message(FATAL_ERROR "Invalid channel for VERSION")
+endif()
+execute_process(COMMAND git rev-parse --verify HEAD WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE ACHERON_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT ACHERON_COMMIT MATCHES "^[0-9a-f]+$")
+    if(NOT ACHERON_CHANNEL STREQUAL "development")
+        message(FATAL_ERROR "Release builds require a Git checkout")
+    endif()
+    set(ACHERON_COMMIT unknown)
+endif()

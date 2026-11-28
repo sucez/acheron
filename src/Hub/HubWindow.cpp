@@ -1,4 +1,5 @@
 #include "HubWindow.hpp"
+#include "BuildInfo.hpp"
 #include "AccountCard.hpp"
 #include "ProfileColor.hpp"
 #include "DesktopShortcut.hpp"
@@ -565,6 +566,30 @@ void HubWindow::preferences()
         delete archived;
     }
     auto *quit = new QPushButton(tr("Quit all sessions…"));
+    auto *about = new QPushButton(tr("About Acheron Custom"));
+    layout->addWidget(about);
+    connect(about, &QPushButton::clicked, &dialog, [&dialog] {
+        QDialog box(&dialog);
+        box.setWindowTitle(tr("About Acheron Custom"));
+        QVBoxLayout content(&box);
+        content.addWidget(label("Acheron Custom", "headline"));
+        const auto info = buildInfo();
+        const auto details = tr("Version %1\nChannel: %2\nCommit: %3\nArchitecture: %4")
+            .arg(QCoreApplication::applicationVersion(), info.value("channel").toString(),
+                 info.value("commit").toString(), info.value("architecture").toString());
+        content.addWidget(label(details));
+        auto *links = new QLabel(QStringLiteral("<a href='https://github.com/sucez/acheron'>Acheron Custom</a> · "
+                                                "<a href='https://github.com/ouwou/acheron'>Original Acheron</a>"));
+        links->setOpenExternalLinks(true);
+        content.addWidget(links);
+        content.addWidget(label(tr("GNU General Public License v3")));
+        QDialogButtonBox buttons(QDialogButtonBox::Close);
+        auto *copy = buttons.addButton(tr("Copy technical information"), QDialogButtonBox::ActionRole);
+        connect(copy, &QPushButton::clicked, &box, [details] { QApplication::clipboard()->setText("Acheron Custom\n" + details); });
+        connect(&buttons, &QDialogButtonBox::rejected, &box, &QDialog::reject);
+        content.addWidget(&buttons);
+        box.exec();
+    });
     layout->addWidget(quit);
     connect(quit, &QPushButton::clicked, &dialog, [&] { dialog.reject(); quitAll(); });
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);

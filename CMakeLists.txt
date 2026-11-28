@@ -18,7 +18,9 @@ if(FFMPEG_FROM_VCPKG)
     list(APPEND VCPKG_MANIFEST_FEATURES "ffmpeg")
 endif()
 
-project(acheron LANGUAGES CXX)
+include(cmake/Version.cmake)
+project(acheron VERSION ${ACHERON_NUMERIC_VERSION} LANGUAGES CXX)
+configure_file(cmake/BuildInfo.cpp.in BuildInfo.cpp @ONLY)
 
 include(qt.cmake)
 
@@ -195,6 +197,7 @@ endif()
 
 set(PROJECT_SOURCES
     resources.qrc
+    ${CMAKE_CURRENT_BINARY_DIR}/BuildInfo.cpp
     src/main.cpp
     src/Hub/HubWindow.cpp
     src/Hub/CardMetadata.cpp
@@ -881,7 +884,8 @@ if(FFMPEG_RUNTIME_DLLS)
 endif()
 
 if(WIN32)
-    target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp)
+    configure_file(cmake/acheron.rc.in acheron.rc @ONLY)
+    target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp ${CMAKE_CURRENT_BINARY_DIR}/acheron.rc)
     target_link_libraries(acheron PRIVATE ole32 shell32 uuid)
 endif()
 
