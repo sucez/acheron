@@ -885,7 +885,9 @@ endif()
 
 if(WIN32)
     configure_file(cmake/acheron.rc.in acheron.rc @ONLY)
-    target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp ${CMAKE_CURRENT_BINARY_DIR}/acheron.rc)
+    enable_language(RC)
+    add_library(acheron_version_resource OBJECT ${CMAKE_CURRENT_BINARY_DIR}/acheron.rc)
+    target_sources(acheron PRIVATE src/Hub/DesktopShortcut.cpp $<TARGET_OBJECTS:acheron_version_resource>)
     target_link_libraries(acheron PRIVATE ole32 shell32 uuid)
 endif()
 
