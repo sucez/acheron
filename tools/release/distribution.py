@@ -45,7 +45,7 @@ FIXED = {"acheron.exe", "build-info.json", "license.txt", "third-party.md",
 REQUIRED = ("qt6core.dll", "qt6gui.dll", "qt6widgets.dll", "qt6network.dll", "qt6svg.dll",
             "platforms/qwindows.dll", "sqldrivers/qsqlite.dll", "tls/qschannelbackend.dll",
             "*curl*impersonate*.dll", "avcodec*.dll", "avformat*.dll", "avutil*.dll",
-            "swresample*.dll", "swscale*.dll", "msvcp140.dll", "vcruntime140.dll")
+            "avfilter*.dll", "avdevice*.dll", "swresample*.dll", "swscale*.dll", "msvcp140.dll", "vcruntime140.dll")
 
 
 def validate_entries(entries):

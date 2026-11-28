@@ -29,7 +29,9 @@ def stage(info):
     target.mkdir()  # Never reuse a directory containing previous outputs.
     exe = target / "acheron.exe"
     copy(binary / exe.name, exe)
-    for file in [*binary.glob("*.dll"), *Path("curl-impersonate/lib").glob("*.dll"),
+    media = ("avcodec", "avformat", "avutil", "avfilter", "avdevice", "swresample", "swscale")
+    ffmpeg_dlls = [file for component in media for file in binary.glob(component + "*.dll")]
+    for file in [*ffmpeg_dlls, *Path("curl-impersonate/lib").glob("*.dll"),
                  *Path(os.environ["VCToolsRedistDir"]).glob("x64/Microsoft.VC*.CRT/*.dll")]:
         copy(file, target / file.name)
     subprocess.run(["windeployqt", "--release", "--no-translations", "--no-opengl-sw",
