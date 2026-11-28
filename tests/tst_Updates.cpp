@@ -1,5 +1,6 @@
 #include "Updates/Manifest.hpp"
 #include "Updates/Signature.hpp"
+#include "Updates/UpdateManager.hpp"
 #include <QtTest>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -8,6 +9,29 @@ using namespace Acheron::Updates;
 class TestUpdates : public QObject {
     Q_OBJECT
 private slots:
+    void settings() {
+        QTemporaryDir temp;
+        Acheron::Hub::Registry registry(temp.path());
+        QNetworkAccessManager net;
+        ClientIdentity id{"0.4.0","development","linux","x64",{}};
+        UpdateManager updates(registry,net,id);
+        QCOMPARE(updates.channel(),QString("stable"));
+        QVERIFY(!updates.automatic());
+        QVERIFY(updates.preferences("preview",true));
+        UpdateManager reopened(registry,net,id);
+        QCOMPARE(reopened.channel(),QString("preview"));
+        QVERIFY(reopened.automatic());
+        reopened.startup();
+        QCOMPARE(reopened.state(),UpdateManager::Idle);
+        reopened.check();
+        QCOMPARE(reopened.state(),UpdateManager::Unavailable);
+    }
+    void redirects() {
+        QVERIFY(Transfer::allowedRedirect(QUrl("https://release-assets.githubusercontent.com/path")));
+        for (auto url : {"http://objects.githubusercontent.com/x","https://evil.test/x","https://objects.githubusercontent.com.evil.test/x",
+                         "https://user@objects.githubusercontent.com/x","https://objects.githubusercontent.com:81/x"})
+            QVERIFY(!Transfer::allowedRedirect(QUrl(url)));
+    }
     void signatures() {
         const auto key = QByteArray::fromHex("8a6a628436bc616846d28fc40314e830ddc68adc25030693f1d1ecde76c810ab");
         const auto signature = QByteArray::fromHex("636435343435616631633132346164353264306265623265653161313764303636346461316662633865623961336131366135636635343564383839383834360afa3cf89caf78145f5cc2e94df02f769d4d3368ab0cc74aaced0c21bd89e09c69070a470d20731b2e374fbf6cac4f2a2a0a54eef3cd3dcc1d0d431f14cb5e6e08");
