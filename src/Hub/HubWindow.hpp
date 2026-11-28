@@ -4,6 +4,7 @@
 #include <QPixmap>
 #include <QSystemTrayIcon>
 
+class QLineEdit;
 class QLabel;
 class QScrollArea;
 class QVBoxLayout;
@@ -27,6 +28,7 @@ private:
     QTimer redraw;
     QVBoxLayout *cards;
     QScrollArea *scroll;
+    QLineEdit *search;
     QLabel *intro, *title, *notice;
     QPushButton *launchAll;
     QSystemTrayIcon *tray = nullptr;

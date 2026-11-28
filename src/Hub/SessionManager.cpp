@@ -66,7 +66,7 @@ bool SessionManager::busy(const QString &id) const
 bool SessionManager::controllable(const QString &id) const
 {
     const auto value = state(id);
-    return value == Open || value == Connecting || value == NeedsAuth;
+    return value == Open || value == Connecting || value == NeedsAuth || value == GatewayError;
 }
 
 void SessionManager::refresh()
@@ -109,13 +109,9 @@ void SessionManager::refresh()
             probing.remove(id);
             if (!locked(id))
                 return;
-            if (reply == "window" || reply == "connecting" || reply == "needs-auth") {
+            const State state = reportedState(reply);
+            if (state != Locked) {
                 deadlines.remove(id);
-                State state = Open;
-                if (reply == "connecting")
-                    state = Connecting;
-                else if (reply == "needs-auth")
-                    state = NeedsAuth;
                 setState(id, state);
             } else if (deadlines.value(id) <= QDateTime::currentMSecsSinceEpoch()) {
                 deadlines.remove(id);
@@ -134,6 +130,8 @@ void SessionManager::open(const QString &id, bool add)
     if (!registry.profiles().contains(id) || deadlines.contains(id))
         return;
     if (locked(id)) {
+        registry.set("used/" + id, QDateTime::currentMSecsSinceEpoch());
+        emit changed();
         request(this, registry.directory(id), state(id) == NeedsAuth ? "login" : "activate", [this](QByteArray reply) {
             if (reply != "ok")
                 emit problem(tr("The profile is in use. Switch to its window from the taskbar."));
@@ -145,6 +143,7 @@ void SessionManager::open(const QString &id, bool add)
         setState(id, Failed);
         return;
     }
+    registry.set("used/" + id, QDateTime::currentMSecsSinceEpoch());
     deadlines[id] = QDateTime::currentMSecsSinceEpoch() + 15000;
     setState(id, Launching);
     monitor.start();

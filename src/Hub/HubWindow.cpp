@@ -1,4 +1,7 @@
 #include "HubWindow.hpp"
+#include "AccountCard.hpp"
+#include "ProfileColor.hpp"
+#include "DesktopShortcut.hpp"
 #include "Core/Profile.hpp"
 #include "LocalControl.hpp"
 #include "CardMetadata.hpp"
@@ -23,6 +26,7 @@ QLabel#muted {color:#aaaabb}
 QLabel#cardName {font-size:15px;font-weight:bold}
 QLabel#notice {color:#f2b2ad}
 QFrame#card {background:#242631;border:1px solid #393b49;border-radius:10px}
+QFrame#card:hover {border-color:#686782}
 QPushButton,QToolButton {background:#323440;border:1px solid #454754;border-radius:6px;padding:7px 12px;color:#f5f4fa}
 QPushButton:hover,QToolButton:hover {background:#414452}
 QPushButton:focus,QToolButton:focus {border-color:#aaa4ff}
@@ -69,7 +73,7 @@ private:
     QString full;
 };
 
-const QStringList AvatarColors{"#4a416f", "#34565a", "#644351", "#435479"};
+
 
 void foreground(QWidget &window)
 {
@@ -136,6 +140,11 @@ HubWindow::HubWindow(const QString &directory) : registry(directory), sessions(r
     header->addStretch();
     auto *settings = new QPushButton(tr("Settings"));
     settings->setShortcut(QKeySequence("Ctrl+,"));
+    auto *find = new QToolButton;
+    find->setText(tr("Find"));
+    find->setShortcut(QKeySequence::Find);
+    find->setToolTip(tr("Find a profile or username (Ctrl+F)"));
+    header->addWidget(find);
     header->addWidget(settings);
     layout->addLayout(header);
     layout->addSpacing(8);
@@ -144,6 +153,17 @@ HubWindow::HubWindow(const QString &directory) : registry(directory), sessions(r
     intro->setWordWrap(true);
     layout->addWidget(title);
     layout->addWidget(intro);
+    search = new QLineEdit;
+    search->setPlaceholderText(tr("Find a profile or username"));
+    search->setClearButtonEnabled(true);
+    layout->addWidget(search);
+    search->hide();
+    connect(find, &QToolButton::clicked, this, [this] {
+        search->setVisible(!search->isVisible());
+        if (search->isVisible()) search->setFocus();
+        else search->clear();
+    });
+    connect(search, &QLineEdit::textChanged, this, &HubWindow::render);
     scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
     auto *body = new QWidget;
@@ -217,8 +237,11 @@ void HubWindow::render()
         item->widget()->deleteLater();
         delete item;
     }
+    const auto density = registry.option("density").toString();
+    const int padding = density == "compact" ? 7 : density == "spacious" ? 18 : 12;
+    cards->setSpacing(padding / 2 + 2);
     int visible = 0;
-    for (const QString &id : registry.profiles()) {
+    for (const QString &id : registry.ordered()) {
         const auto state = sessions.state(id);
         if (registry.option("archived/" + id).toBool() && state == SessionManager::Closed)
             continue;
@@ -255,22 +278,29 @@ void HubWindow::render()
             }
         }
         const auto display = registry.name(id);
-        auto *card = new QFrame;
+        const auto query = search->text().trimmed();
+        if (!id.contains(query, Qt::CaseInsensitive) && !display.contains(query, Qt::CaseInsensitive)
+            && !subtitles.value(id).contains(query, Qt::CaseInsensitive))
+            continue;
+        auto *card = new AccountCard(id, [this](const QString &source, const QString &target) {
+            if (registry.moveTo(source, target)) redraw.start();
+        });
         card->setObjectName("card");
         auto *row = new QHBoxLayout(card);
-        row->setContentsMargins(12, 12, 10, 12);
+        row->setContentsMargins(12, padding, 10, padding);
         const int savedColor = registry.option("color/" + id, -1).toInt();
-        const auto color = AvatarColors.value(savedColor, AvatarColors.at(qHash(id, 0) % AvatarColors.size()));
+        const auto color = profileColor(id, savedColor);
         auto *avatar = label(display.left(1).toUpper());
         if (portraits.contains(id))
             avatar->setPixmap(portraits.value(id).scaled(36, 36, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         avatar->setFixedSize(36, 36);
         avatar->setAlignment(Qt::AlignCenter);
         avatar->setStyleSheet("background:" + color + ";border-radius:18px;font-weight:bold;font-size:16px");
+        avatar->setToolTip(tr("Drag to reorder within favorites or other accounts."));
         row->addWidget(avatar);
         auto *text = new QVBoxLayout;
         text->setSpacing(3);
-        auto *name = new NameLabel(display);
+        auto *name = new NameLabel(registry.option("favorite/" + id).toBool() ? QStringLiteral("★ ") + display : display);
         name->setObjectName("cardName");
         text->addWidget(name);
         const QString subtitle = subtitles.value(id);
@@ -282,6 +312,7 @@ void HubWindow::render()
         switch (state) {
         case SessionManager::Launching: action = tr("Launching…"); break;
         case SessionManager::Connecting: action = tr("Connecting…"); break;
+        case SessionManager::GatewayError: action = tr("Connection error"); break;
         case SessionManager::NeedsAuth: action = tr("Reconnect"); break;
         case SessionManager::Open: action = tr("Switch to window"); break;
         case SessionManager::Locked: action = tr("In use"); break;
@@ -291,13 +322,14 @@ void HubWindow::render()
         auto *button = new QPushButton(action);
         if (state == SessionManager::Open || state == SessionManager::Connecting)
             button->setObjectName("running");
-        else if (state == SessionManager::Failed || state == SessionManager::NeedsAuth)
+        else if (state == SessionManager::Failed || state == SessionManager::GatewayError || state == SessionManager::NeedsAuth)
             button->setObjectName("failed");
         button->setEnabled(state != SessionManager::Launching);
         connect(button, &QPushButton::clicked, this, [this,id] { sessions.open(id); });
         row->addWidget(button);
         auto *more = new QToolButton;
         more->setText(QStringLiteral("⋯"));
+        more->setToolTip(tr("Account actions"));
         more->setAccessibleName(tr("Actions for %1").arg(display));
         connect(more, &QToolButton::clicked, this, [this,id,more] { menu(id, more); });
         button->setProperty("hubAction", "open/" + id);
@@ -312,8 +344,9 @@ void HubWindow::render()
     title->setText(visible ? tr("Welcome back.") : tr("Welcome to Acheron."));
     intro->setText(visible ? tr("Choose an account to start chatting.")
                            : tr("Add your first account to open a chat window. Each account has its own space."));
+    if (visible && cards->count() == 0) intro->setText(tr("No matching accounts."));
     launchAll->setVisible(visible > 1);
-    const int targetHeight = qMin(245 + visible * 78, 650);
+    const int targetHeight = qMin(225 + visible * (44 + 2 * padding + cards->spacing()), 650);
     if (autoHeight == 0 || height() == autoHeight)
         resize(autoHeight ? width() : 480, targetHeight);
     autoHeight = targetHeight;
@@ -408,6 +441,24 @@ void HubWindow::menu(const QString &id, QWidget *anchor)
     auto *close = actions.addAction(tr("Close session"), this, [this,id] { sessions.close(id, false); });
     close->setEnabled(sessions.controllable(id));
     actions.addSeparator();
+    auto *favorite = actions.addAction(tr("Favorite"));
+    favorite->setCheckable(true);
+    favorite->setChecked(registry.option("favorite/" + id).toBool());
+    connect(favorite, &QAction::triggered, this, [this,id](bool on) {
+        if (save("favorite/" + id, on)) redraw.start();
+    });
+    QStringList peers;
+    for (const auto &other : registry.ordered())
+        if (!registry.option("archived/" + other).toBool() &&
+            registry.option("favorite/" + other).toBool() == favorite->isChecked())
+            peers << other;
+    for (int step : {-1, 1}) {
+        const auto target = peers.value(peers.indexOf(id) + step);
+        auto *action = actions.addAction(step < 0 ? tr("Move up") : tr("Move down"), this, [this,id,target] {
+            if (registry.moveTo(id, target)) redraw.start();
+        });
+        action->setEnabled(!target.isEmpty());
+    }
     actions.addAction(tr("Rename profile…"), this, [this,id] {
         bool ok = false;
         const auto name = QInputDialog::getText(this, tr("Rename profile"), tr("Display name"), QLineEdit::Normal,
@@ -430,6 +481,13 @@ void HubWindow::menu(const QString &id, QWidget *anchor)
     include->setChecked(!registry.option("exclude/" + id).toBool());
     connect(include, &QAction::triggered, this, [this,id](bool checked) { save("exclude/" + id, !checked); });
     actions.addAction(tr("Set as default"), this, [this,id] { save("default", id); });
+#ifdef Q_OS_WIN
+    actions.addAction(tr("Create desktop shortcut"), this, [this,id] {
+        const auto error = createDesktopShortcut(id);
+        if (!error.isEmpty())
+            QMessageBox::warning(this, windowTitle(), error);
+    });
+#endif
     auto *archive = actions.addAction(tr("Archive profile"), this, [this,id] {
         if (save("archived/" + id, true))
             render();
@@ -445,6 +503,19 @@ void HubWindow::preferences()
     dialog.setWindowTitle(tr("Hub settings"));
     auto *layout = new QVBoxLayout(&dialog);
     auto *form = new QFormLayout;
+    auto *density = new QComboBox;
+    density->addItem(tr("Compact"), "compact");
+    density->addItem(tr("Comfortable"), "comfortable");
+    density->addItem(tr("Spacious"), "spacious");
+    const int index = density->findData(registry.option("density"));
+    density->setCurrentIndex(index < 0 ? 1 : index);
+    form->addRow(tr("Card density"), density);
+    auto *sort = new QComboBox;
+    sort->addItem(tr("Custom order"), "custom");
+    sort->addItem(tr("Name"), "name");
+    sort->addItem(tr("Last used"), "recent");
+    sort->setCurrentIndex(qMax(0, sort->findData(registry.option("sort"))));
+    form->addRow(tr("Sort by"), sort);
     auto *startup = new QComboBox;
     startup->addItem(tr("Open Hub only"), "hub");
     startup->addItem(tr("Restore previous sessions"), "restore");
@@ -501,13 +572,15 @@ void HubWindow::preferences()
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     if (dialog.exec() == QDialog::Accepted) {
-        save("default", defaultId->currentData());
-        save("startup", startup->currentData());
-        save("close", close->currentData());
+        QVariantMap values{{"density", density->currentData()}, {"sort", sort->currentData()}, {"default", defaultId->currentData()}, {"startup", startup->currentData()},
+                           {"close", close->currentData()}};
         for (int i = 0; i < selected->count(); ++i) {
             const auto *item = selected->item(i);
-            save("selected/" + item->data(Qt::UserRole).toString(), item->checkState() == Qt::Checked);
+            values.insert("selected/" + item->data(Qt::UserRole).toString(), item->checkState() == Qt::Checked);
         }
+        if (!registry.setOptions(values))
+            QMessageBox::warning(this, windowTitle(), tr("Could not save Hub preferences."));
+        render();
     }
 }
 

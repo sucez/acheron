@@ -63,12 +63,17 @@ int runSessionWindow(Core::Session &session, UI::MainWindow &window, const QStri
     });
 
     std::optional<Core::Snowflake> needsAuth;
+    std::optional<Core::Snowflake> gatewayError;
     QObject controlContext;
+    QObject::connect(&session, &Core::Session::gatewayFailed, &controlContext,
+                     [&](Core::Snowflake id) { gatewayError = id; });
     QObject::connect(&session, &Core::Session::authenticationRequired, &controlContext,
                      [&](Core::Snowflake id) { needsAuth = id; });
     QObject::connect(&session, &Core::Session::connectionStateChanged, &controlContext,
                      [&](Core::Snowflake id, Core::ConnectionState state) {
-        if (needsAuth == id && state == Core::ConnectionState::Connected)
+        if (gatewayError == id && (state == Core::ConnectionState::Connecting || state == Core::ConnectionState::Connected))
+            gatewayError.reset();
+        if (needsAuth == id && (state == Core::ConnectionState::Connecting || state == Core::ConnectionState::Connected))
             needsAuth.reset();
     });
     bool preserve = false;
@@ -81,6 +86,8 @@ int runSessionWindow(Core::Session &session, UI::MainWindow &window, const QStri
                 const auto *single = accounts->singleAccount();
                 if (single && needsAuth == single->id)
                     return QByteArray("needs-auth");
+                if (single && gatewayError == single->id)
+                    return QByteArray("gateway-error");
                 return QByteArray("window");
             }
             if (verb == "activate" || verb == "login") {

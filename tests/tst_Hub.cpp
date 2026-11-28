@@ -1,4 +1,6 @@
 #include "Hub/Registry.hpp"
+#include "Hub/SessionManager.hpp"
+#include "Hub/DesktopShortcut.hpp"
 #include "Hub/CardMetadata.hpp"
 #include <QProcess>
 #include <QSaveFile>
@@ -79,6 +81,51 @@ private slots:
         file.write(QByteArray(32769, 'x'));
         file.close();
         QVERIFY(!CardMetadata::read(temp.path()));
+    }
+
+    void reportedSessionStates()
+    {
+        QCOMPARE(SessionManager::reportedState("window"), SessionManager::Open);
+        QCOMPARE(SessionManager::reportedState("needs-auth"), SessionManager::NeedsAuth);
+        QCOMPARE(SessionManager::reportedState("gateway-error"), SessionManager::GatewayError);
+        QCOMPARE(SessionManager::reportedState("connecting"), SessionManager::Connecting);
+        QCOMPARE(SessionManager::reportedState("unknown"), SessionManager::Locked);
+    }
+
+    void shortcuts()
+    {
+        QCOMPARE(shortcutArguments("studio-2"), QString("--profile studio-2"));
+        for (auto id : {"", "a b", "../a", "a&b", "a\"b", "A"})
+            QVERIFY(shortcutArguments(id).isEmpty());
+    }
+
+    void arrangement()
+    {
+        QTemporaryDir dir;
+        Registry r(dir.filePath("Hub"));
+        for (auto id : {"a", "b", "c"}) QVERIFY(r.create(id));
+        QVERIFY(r.moveTo("c", "a"));
+        Registry reopened(dir.filePath("Hub"));
+        QCOMPARE(reopened.ordered(), QStringList({"c", "a", "b"}));
+        QVERIFY(reopened.setOptions({{"favorite/b", true}, {"sort", "name"}}));
+        QCOMPARE(reopened.ordered(), QStringList({"b", "a", "c"}));
+        QVERIFY(reopened.setOptions({{"sort", "recent"}, {"used/c", 12}}));
+        QCOMPARE(reopened.ordered(), QStringList({"b", "c", "a"}));
+        QVERIFY(!reopened.moveTo("b", "c"));
+    }
+
+    void missingSchema()
+    {
+        QTemporaryDir dir;
+        QFile file(dir.filePath("registry.ini"));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("[General]\nstartup=selected\n");
+        file.close();
+        Registry registry(dir.path());
+        QVERIFY(!registry.usable());
+        QVERIFY(!registry.set("startup", "hub"));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), QByteArray("[General]\nstartup=selected\n"));
     }
 
     void damagedPreferences()

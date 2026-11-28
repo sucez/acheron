@@ -1,6 +1,11 @@
 #include "MainWindow.hpp"
 
 #include <QApplication>
+#include "Hub/ProfileColor.hpp"
+#include "Core/Profile.hpp"
+#include <QStandardPaths>
+#include <QDir>
+#include <QToolButton>
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QMessageBox>
@@ -2897,10 +2902,23 @@ void MainWindow::setupMenu()
     connect(accountsAction, &QAction::triggered, this, &MainWindow::openAccountsWindow);
     viewMenu->addAction(accountsAction);
 
-    viewMenu->addAction(tr("Open Acheron Hub"), this, [this] {
+    auto *openHub = viewMenu->addAction(tr("Open Acheron Hub"), this, [this] {
         if (!QProcess::startDetached(QCoreApplication::applicationFilePath(), QStringList{}))
             QMessageBox::warning(this, tr("Acheron Hub"), tr("Could not start the Hub."));
     });
+
+    const auto id = QCoreApplication::applicationName().mid(Core::Profile::ApplicationPrefix.size());
+    const auto dir = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).absoluteDir();
+    QSettings hub(dir.filePath("Acheron-Hub/registry.ini"), QSettings::IniFormat);
+    const bool supported = hub.value("schema").toInt() == 1;
+    const auto alias = supported ? hub.value("name/" + id, id).toString().simplified().left(100) : id;
+    const int color = supported ? hub.value("color/" + id, -1).toInt() : -1;
+    auto *profile = new QToolButton(menuBar);
+    profile->setText(tr("Profile · %1").arg(profile->fontMetrics().elidedText(alias, Qt::ElideRight, 160)).replace("&", "&&"));
+    profile->setToolTip(tr("Open Acheron Hub · %1 (%2)").arg(alias, id).toHtmlEscaped());
+    profile->setStyleSheet(QStringLiteral("QToolButton {border:0; border-left:4px solid %1; padding:2px 8px;}").arg(Hub::profileColor(id, color)));
+    connect(profile, &QToolButton::clicked, openHub, &QAction::trigger);
+    menuBar->setCornerWidget(profile, Qt::TopRightCorner);
 
     auto *settingsAction = new QAction(tr("&Settings"), this);
     connect(settingsAction, &QAction::triggered, this, &MainWindow::openSettingsWindow);

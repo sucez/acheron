@@ -74,3 +74,15 @@ La vérification observe le Hub vide, un puis trois profils historiques, 19 prof
 3. Avec un profil réservé à la qualification connectée, vérifier Login avec une entrée de trousseau valide, le parcours natif en cas de nouvelle authentification et l’actualisation du pseudo et de la miniature. Les scénarios automatisés restent hors ligne.
 4. Vérifier la réduction dans la zone de notification, l’activation ou le clignotement depuis une autre application, la fermeture normale et globale, puis la restauration. Ouvrir un raccourci `--profile` avec restauration activée et vérifier que seul ce profil démarre.
 5. Examiner à 100 %, 125 %, 150 % et 200 % les boutons, le défilement, le pseudo long et les fenêtres de préférences. Vérifier aussi la voix, la vidéo et les notifications dans les configurations qui les activent.
+
+## Qualification #003
+
+La matrice de la base #002 a réussi à `2c8d5f1` (43/43 sur MinSizeRel, RelWithDebInfo et Qt5, 24/24 sur la configuration minimale). Pour la branche #003, compléter les deux scénarios X11 précédents par le test des densités, de la recherche et du profil visible dans la messagerie.
+
+```sh
+xvfb-run -a /usr/bin/python3 tests/hub_polish_smoke.py "$dev/build/acheron" /tmp/hub-polish
+```
+
+Sur Windows, vérifier le déplacement à la souris et au clavier puis relancer le Hub. Tester les quatre échelles 100–200 %. Installer l’exécutable dans un chemin avec espaces et caractères Unicode, créer un raccourci sur le bureau réel (y compris redirigé), inspecter sa cible, ses arguments et son icône, puis l’ouvrir avec le Hub fermé. Répéter la création et vérifier que le fichier précédent est conservé. Contrôler le refus de permission dans un bureau non inscriptible.
+
+Sous Linux Qt 5.15, les 23 suites CTest et les trois scénarios X11 ont réussi en #003. Le scénario de présentation vérifie l’ordre enregistré après un glisser-déposer, la disparition des cartes non correspondantes après saisie du pseudo, les hauteurs de 414/453/498 pixels logiques pour trois cartes et la largeur du Hub aux facteurs Qt 1,25, 1,5 et 2. Les clics sur Login utilisent uniquement les profils synthétiques. Les erreurs de passerelle sont vérifiées au niveau des états du protocole local. La création de fichiers .lnk et le comportement de la passerelle en ligne restent à qualifier sur leurs plateformes.

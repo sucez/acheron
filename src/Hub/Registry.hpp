@@ -9,6 +9,8 @@ class Registry
 public:
     explicit Registry(const QString &hubDir);
     QStringList profiles() const;
+    QStringList ordered() const;
+    bool moveTo(const QString &id, const QString &target);
     QString directory(const QString &id) const;
     QString suggest() const;
     bool create(const QString &id);
@@ -16,6 +18,7 @@ public:
     QString summary(const QString &id) const;
     QVariant option(const QString &key, const QVariant &fallback = {}) const;
     bool set(const QString &key, const QVariant &value);
+    bool setOptions(const QVariantMap &values);
     QString root() const { return parent.absolutePath(); }
     bool usable() const;
 
