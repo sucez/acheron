@@ -18,7 +18,7 @@ def notices(source, destination):
     count = 0
     for file in source.rglob("*"):
         if file.is_file() and file.name.lower().startswith(("license", "licence", "copying", "copyright", "notice")):
-            copy(file, destination / file.relative_to(source))
+            copy(file, destination / (str(file.relative_to(source)) + ".txt"))
             count += 1
     return count
 
@@ -36,17 +36,12 @@ def stage(info):
                     "--no-system-d3d-compiler", "--no-compiler-runtime", str(exe)], check=True)
     for item in ["fonts/TwemojiCOLRv0.ttf", "certs/cacert.pem"]:
         copy(binary / item, target / item)
-    for pattern in ["Qt6Core.dll", "Qt6Gui.dll", "Qt6Widgets.dll", "Qt6Network.dll", "Qt6Svg.dll",
-                    "platforms/qwindows.dll", "sqldrivers/qsqlite.dll", "tls/qschannelbackend.dll",
-                    "*curl*impersonate*.dll", "avcodec*.dll", "avformat*.dll", "avutil*.dll",
-                    "swresample*.dll", "swscale*.dll", "msvcp140.dll", "vcruntime140.dll"]:
-        if not any(target.glob(pattern)):
-            raise ValueError(f"Missing runtime component: {pattern}")
     for plugin in (target / "sqldrivers").glob("*.dll"):
         if plugin.name.lower() != "qsqlite.dll":
             plugin.unlink()
     licenses = target / "licenses"
-    shutil.copytree("packaging/licenses", licenses)
+    for file in Path("packaging/licenses").iterdir():
+        copy(file, licenses / (file.name + ".txt"))
     copy(Path("LICENSE.txt"), target / "LICENSE.txt")
     copy(Path("packaging/THIRD-PARTY.md"), target / "THIRD-PARTY.md")
     share = Path("build/vcpkg_installed/x64-windows-static-md/share")
@@ -61,7 +56,9 @@ def stage(info):
     notices(Path("curl-impersonate"), licenses / "curl-impersonate")
     for root in [Path(os.environ["QT_ROOT_DIR"]) / "licenses", Path(os.environ["QT_ROOT_DIR"]).parent.parent / "Licenses"]:
         if root.is_dir():
-            shutil.copytree(root, licenses / "Qt", dirs_exist_ok=True)
+            for file in root.rglob("*"):
+                if file.is_file() and file.suffix.lower() in ("", ".txt", ".md", ".html"):
+                    copy(file, licenses / "Qt" / (str(file.relative_to(root)) + ".txt"))
     # Isolate the probe from the installed Qt kit and compiler runtime on PATH.
     env = {k: os.environ[k] for k in ("SYSTEMROOT", "TEMP", "TMP")}
     env["PATH"] = str(Path(env["SYSTEMROOT"]) / "System32")

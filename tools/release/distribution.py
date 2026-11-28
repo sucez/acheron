@@ -1,5 +1,6 @@
 """Build and independently verify the assets attached to a Windows release."""
 import argparse
+import fnmatch
 import hashlib
 import json
 import re
@@ -35,10 +36,39 @@ def digest(path):
     return result.hexdigest()
 
 
+# Entries allowed outside the isolated license inventory. Qt plugins reside one
+# directory below the executable. Application artwork is compiled into the EXE.
+FIXED = {"acheron.exe", "build-info.json", "license.txt", "third-party.md",
+         "fonts/twemojicolrv0.ttf", "certs/cacert.pem"}
+REQUIRED = ("qt6core.dll", "qt6gui.dll", "qt6widgets.dll", "qt6network.dll", "qt6svg.dll",
+            "platforms/qwindows.dll", "sqldrivers/qsqlite.dll", "tls/qschannelbackend.dll",
+            "*curl*impersonate*.dll", "avcodec*.dll", "avformat*.dll", "avutil*.dll",
+            "swresample*.dll", "swscale*.dll", "msvcp140.dll", "vcruntime140.dll")
+
+
+def validate_entries(entries):
+    names = set()
+    for entry in entries:
+        name = entry.lower()
+        parts = name.split("/")
+        if (any(p in ("", ".", "..") for p in parts) or ":" in name or chr(92) in name
+                or name in names):
+            raise ValueError(f"Ambiguous archive path: {entry}")
+        runtime = len(parts) <= 2 and name.endswith(".dll")
+        legal = parts[0] == "licenses" and len(parts) > 1 and name.endswith(".txt")
+        if name not in FIXED and not runtime and not legal:
+            raise ValueError(f"Unexpected archive entry: {entry}")
+        names.add(name)
+    for required in (*FIXED, *REQUIRED, "licenses/*.txt"):
+        if not any(fnmatch.fnmatchcase(name, required) for name in names):
+            raise ValueError(f"Missing archive entry: {required}")
+
+
 def manifest(path, info):
     if path.name != asset_name(info):
         raise ValueError("Incorrect asset name")
     with ZipFile(path) as archive:
+        validate_entries(archive.namelist())
         if archive.testzip() or json.loads(archive.read("build-info.json")) != info:
             raise ValueError("Invalid ZIP or mismatched build identity")
     tag = "v" + info["version"]
@@ -52,12 +82,16 @@ def manifest(path, info):
 def create(stage, output, info):
     if json.loads((stage / "build-info.json").read_text(encoding="utf-8")) != info:
         raise ValueError("Executable identity differs from release request")
+    files = sorted(stage.rglob("*"))
+    if any(file.is_symlink() for file in files):
+        raise ValueError("Symlinks are not distribution inputs")
+    files = [file for file in files if file.is_file()]
+    validate_entries(file.relative_to(stage).as_posix() for file in files)
     output.mkdir(parents=True, exist_ok=True)
     path = output / asset_name(info)
     with ZipFile(path, "x", compression=ZIP_DEFLATED) as archive:
-        for file in sorted(stage.rglob("*")):
-            if file.is_file():
-                archive.write(file, file.relative_to(stage))
+        for file in files:
+            archive.write(file, file.relative_to(stage))
     data = manifest(path, info)
     (output / "manifest.json").write_bytes(encode(data).encode())
     (output / "SHA256SUMS").write_bytes(checksum_line(data))

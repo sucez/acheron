@@ -18,7 +18,18 @@ class DistributionTests(unittest.TestCase):
         self.out = self.stage.parent / "dist"
         self.info = release.identity("1.2.3", "stable", "1" * 40)
         (self.stage / "build-info.json").write_text(json.dumps(self.info))
-        (self.stage / "acheron.exe").write_bytes(b"synthetic")
+        for item in sorted((release.FIXED - {"build-info.json"}) | set(release.REQUIRED) | {"licenses/gpl.txt"}):
+            file = self.stage / item.replace("*", "1")
+            file.parent.mkdir(exist_ok=True, parents=True)
+            file.write_bytes(b"synthetic")
+
+    def test_package_boundary(self):
+        for item in ["profile/acheron.sqlite", "registry.ini", "TestHub.exe", "file.pdb", "../evil.dll"]:
+            with self.subTest(item=item), self.assertRaisesRegex(ValueError, "Unexpected|Ambiguous"):
+                release.validate_entries([item])
+        (self.stage / "platforms/qwindows.dll").unlink()
+        with self.assertRaisesRegex(ValueError, "qwindows"):
+            release.create(self.stage, self.out, self.info)
 
     def test_channels(self):
         release.identity("0.4.0-preview.2", "preview", "f" * 40)
