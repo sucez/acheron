@@ -1,5 +1,5 @@
 #pragma once
-#include "Manifest.hpp"
+#include "PackageFile.hpp"
 #include "Transfer.hpp"
 #include "Hub/Registry.hpp"
 namespace Acheron::Updates {
@@ -18,6 +18,10 @@ public:
     bool preferences(QString channel, bool automatic);
     const ClientIdentity &client() const { return identity; }
     const std::optional<Package> &offer() const { return package; }
+    void download();
+    void cancelDownload();
+    qint64 received() const { return file ? file->received() : 0; }
+    const std::optional<VerifiedPackage> &verifiedPackage() const { return verified; }
     void check();
     void startup();
 signals:
@@ -31,6 +35,11 @@ private:
     bool sawCompatible = false;
     QByteArray manifest, signature;
     std::optional<Package> package;
+    QTimer verifyTimer;
+    std::unique_ptr<PackageFile> file;
+    std::optional<VerifiedPackage> verified;
+    void verifyFile();
+    void resetDownload();
     void set(State state, QString message = {});
     void success(State state);
     void list(int page);

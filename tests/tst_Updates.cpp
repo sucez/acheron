@@ -32,6 +32,31 @@ private slots:
                          "https://user@objects.githubusercontent.com/x","https://objects.githubusercontent.com:81/x"})
             QVERIFY(!Transfer::allowedRedirect(QUrl(url)));
     }
+    void stagedFiles() {
+        QTemporaryDir root;
+        Package pkg{};
+        pkg.filename="fixture.zip";
+        pkg.size=4;
+        pkg.digest=QCryptographicHash::hash("test",QCryptographicHash::Sha256);
+        for (auto input : {"te","tests","xxxx"}) {
+            PackageFile file(root.path(),pkg);
+            QVERIFY(file.create());
+            const auto bytes=QByteArray(input);
+            QCOMPARE(file.append(bytes),bytes.size()<=4);
+            if (file.beginVerification()) QCOMPARE(file.verifyBlock(),PackageFile::Invalid);
+            QVERIFY(file.publish("manifest","signature").isEmpty());
+        }
+        QVERIFY(QDir(root.path()).entryList(QDir::Dirs|QDir::NoDotAndDotDot).isEmpty());
+        PackageFile file(root.path(),pkg);
+        QVERIFY(file.create()); QVERIFY(file.append("test")); QVERIFY(file.beginVerification());
+        QCOMPARE(file.verifyBlock(),PackageFile::Valid);
+        auto path=file.publish("manifest","signature");
+        QVERIFY(QFile::exists(path));
+        PackageFile again(root.path(),pkg);
+        QVERIFY(!again.reuse("../outside"));
+        QVERIFY(again.reuse(QFileInfo(path).dir().dirName()));
+        QVERIFY(again.beginVerification()); QCOMPARE(again.verifyBlock(),PackageFile::Valid);
+    }
     void signatures() {
         const auto key = QByteArray::fromHex("8a6a628436bc616846d28fc40314e830ddc68adc25030693f1d1ecde76c810ab");
         const auto signature = QByteArray::fromHex("636435343435616631633132346164353264306265623265653161313764303636346461316662633865623961336131366135636635343564383839383834360afa3cf89caf78145f5cc2e94df02f769d4d3368ab0cc74aaced0c21bd89e09c69070a470d20731b2e374fbf6cac4f2a2a0a54eef3cd3dcc1d0d431f14cb5e6e08");

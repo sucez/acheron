@@ -555,7 +555,7 @@ if(BUILD_TESTS)
         add_test(NAME DistributionTests COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_distribution.py")
     endif()
     qt_add_executable(TestUpdates tests/tst_Updates.cpp src/Updates/Manifest.cpp src/Updates/Signature.cpp
-        src/Updates/Transfer.cpp src/Updates/UpdateManager.cpp src/Hub/Registry.cpp)
+        src/Updates/Transfer.cpp src/Updates/UpdateManager.cpp src/Updates/PackageFile.cpp src/Hub/Registry.cpp)
     target_include_directories(TestUpdates PRIVATE src)
     target_link_libraries(TestUpdates PRIVATE Qt::Core Qt::Network Qt::Sql Qt::Test OpenSSL::Crypto)
     add_test(NAME UpdateTests COMMAND TestUpdates)
