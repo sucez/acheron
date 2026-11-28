@@ -578,8 +578,8 @@ void HubWindow::preferences()
             .arg(QCoreApplication::applicationVersion(), info.value("channel").toString(),
                  info.value("commit").toString(), info.value("architecture").toString());
         content.addWidget(label(details));
-        auto *links = new QLabel(QStringLiteral("<a href='https://github.com/sucez/acheron'>Acheron Custom</a> · "
-                                                "<a href='https://github.com/ouwou/acheron'>Original Acheron</a>"));
+        auto *links = new QLabel(QStringLiteral("<a style='color:#b5afff' href='https://github.com/sucez/acheron'>Acheron Custom</a> · "
+                                                "<a style='color:#b5afff' href='https://github.com/ouwou/acheron'>Original Acheron</a>"));
         links->setOpenExternalLinks(true);
         content.addWidget(links);
         content.addWidget(label(tr("GNU General Public License v3")));
