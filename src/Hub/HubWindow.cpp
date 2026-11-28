@@ -1,5 +1,9 @@
 #include "HubWindow.hpp"
 #include "BuildInfo.hpp"
+#include "Updates/UpdateCenter.hpp"
+#include "Updates/UpdateManager.hpp"
+#include "Updates/Signature.hpp"
+#include <QNetworkProxy>
 #include "AccountCard.hpp"
 #include "ProfileColor.hpp"
 #include "DesktopShortcut.hpp"
@@ -178,6 +182,26 @@ HubWindow::HubWindow(const QString &directory) : registry(directory), sessions(r
     notice->setWordWrap(true);
     notice->hide();
     layout->addWidget(notice);
+    const auto info = buildInfo();
+#ifdef Q_OS_WIN
+    const QString os = "windows";
+#else
+    const QString os = "unsupported";
+#endif
+    auto *network = new QNetworkAccessManager(this);
+    network->setProxy(QNetworkProxy::NoProxy);
+    updates = new Updates::UpdateManager(registry,*network,{info.value("version").toString(),
+        info.value("channel").toString(),os,info.value("architecture").toString(),Updates::productionKeys()});
+    updates->setParent(this);
+    auto *updateNote = label({}, "muted");
+    layout->addWidget(updateNote);
+    updateNote->hide();
+    connect(updates,&Updates::UpdateManager::changed,this,[this,updateNote] {
+        if (updates->state() == Updates::UpdateManager::Available) {
+            updateNote->setText(tr("Update %1 available in Settings → Updates.").arg(updates->offer()->version));
+            updateNote->show();
+        } else updateNote->hide();
+    });
     auto *actions = new QHBoxLayout;
     auto *add = new QPushButton(tr("Add an account"));
     add->setObjectName("primary");
@@ -421,6 +445,7 @@ QStringList HubWindow::eligible(LaunchGroup group) const
 
 void HubWindow::startup()
 {
+    QTimer::singleShot(0, updates, &Updates::UpdateManager::startup);
     const auto mode = registry.option("startup").toString();
     if (mode == "selected")
         sessions.enqueue(eligible(LaunchGroup::Selected));
@@ -566,6 +591,12 @@ void HubWindow::preferences()
         delete archived;
     }
     auto *quit = new QPushButton(tr("Quit all sessions…"));
+    auto *updateButton = new QPushButton(tr("Updates…"));
+    layout->addWidget(updateButton);
+    connect(updateButton,&QPushButton::clicked,&dialog,[&] {
+        Updates::UpdateCenter center(*updates,&dialog);
+        center.exec();
+    });
     auto *about = new QPushButton(tr("About Acheron Custom"));
     layout->addWidget(about);
     connect(about, &QPushButton::clicked, &dialog, [&dialog] {

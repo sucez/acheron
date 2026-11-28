@@ -206,6 +206,12 @@ set(PROJECT_SOURCES
     resources.qrc
     ${CMAKE_CURRENT_BINARY_DIR}/BuildInfo.cpp
     src/main.cpp
+    src/Updates/Manifest.cpp
+    src/Updates/Signature.cpp
+    src/Updates/Transfer.cpp
+    src/Updates/PackageFile.cpp
+    src/Updates/UpdateManager.cpp
+    src/Updates/UpdateCenter.cpp
     src/Hub/HubWindow.cpp
     src/Hub/CardMetadata.cpp
     src/Hub/Registry.cpp

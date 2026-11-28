@@ -10,6 +10,7 @@ class QScrollArea;
 class QVBoxLayout;
 class QPushButton;
 
+namespace Acheron::Updates { class UpdateManager; }
 namespace Acheron::Hub {
 
 int runHub();
@@ -24,6 +25,7 @@ protected:
 private:
     Registry registry;
     SessionManager sessions;
+    Updates::UpdateManager *updates;
 
     QTimer redraw;
     QVBoxLayout *cards;
